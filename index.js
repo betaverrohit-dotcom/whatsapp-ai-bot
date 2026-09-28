@@ -1,4 +1,3 @@
-```javascript
 require("dotenv").config();
 
 const express = require("express");
@@ -8,259 +7,289 @@ const app = express();
 
 app.use(express.json());
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 10000;
 
-const VERIFY_TOKEN = process.env.VERIFY_TOKEN;
-const WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN;
-const PHONE_NUMBER_ID = process.env.PHONE_NUMBER_ID;
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const {
+  VERIFY_TOKEN,
+  WHATSAPP_TOKEN,
+  PHONE_NUMBER_ID,
+  GEMINI_API_KEY,
+  GEMINI_MODEL = "gemini-2.5-flash"
+} = process.env;
 
-const GEMINI_MODEL =
-  process.env.GEMINI_MODEL || "gemini-2.5-flash";
-
-const GRAPH_API_VERSION =
-  process.env.GRAPH_API_VERSION || "v23.0";
-
-/*
-====================================================
-HEALTH CHECK
-====================================================
-*/
+// --------------------------------------------------
+// Basic health check
+// --------------------------------------------------
 
 app.get("/", (req, res) => {
-  res.status(200).send("WhatsApp AI bot is running.");
+  res.status(200).send("WhatsApp AI Bot is running.");
 });
 
 app.get("/api", (req, res) => {
-  res.status(200).json({
-    status: "ok",
-    service: "WhatsApp AI Bot"
-  });
+  res.status(200).json({ status: "ok" });
 });
 
-/*
-====================================================
-META WHATSAPP WEBHOOK VERIFICATION
-====================================================
-*/
+// --------------------------------------------------
+// Privacy Policy
+// --------------------------------------------------
+
+app.get("/privacy", (req, res) => {
+  res.type("text/plain").send(
+`Privacy Policy
+
+This WhatsApp AI Bot receives messages sent by users through WhatsApp.
+
+Messages may be processed by Google Gemini to generate AI responses.
+
+Conversation history is temporarily stored in server memory for the purpose of maintaining conversation context.
+
+We do not sell personal information.
+
+Users may contact the bot owner to request deletion of their information.`
+  );
+});
+
+// --------------------------------------------------
+// Meta WhatsApp Webhook Verification
+// --------------------------------------------------
 
 app.get("/webhook", (req, res) => {
-  console.log("=================================");
+  console.log("================================");
   console.log("META WEBHOOK VERIFICATION");
-  console.log("=================================");
+  console.log("Mode:", req.query["hub.mode"]);
+  console.log("Token received:", req.query["hub.verify_token"] ? "YES" : "NO");
+  console.log("Challenge:", req.query["hub.challenge"] ? "YES" : "NO");
+  console.log("================================");
 
   const mode = req.query["hub.mode"];
   const token = req.query["hub.verify_token"];
   const challenge = req.query["hub.challenge"];
 
-  console.log("Mode:", mode || "undefined");
-  console.log("Token received:", token ? "YES" : "NO");
-  console.log("Challenge received:", challenge ? "YES" : "NO");
-
-  if (
-    mode === "subscribe" &&
-    token &&
-    VERIFY_TOKEN &&
-    token === VERIFY_TOKEN
-  ) {
-    console.log("WEBHOOK VERIFIED SUCCESSFULLY");
-
+  if (mode === "subscribe" && token === VERIFY_TOKEN) {
+    console.log("Webhook verification successful.");
     return res.status(200).send(challenge);
   }
 
-  console.log("WEBHOOK VERIFICATION FAILED");
-
+  console.log("Webhook verification failed.");
   return res.sendStatus(403);
 });
 
-/*
-====================================================
-WHATSAPP INCOMING MESSAGE WEBHOOK
-====================================================
-*/
+// --------------------------------------------------
+// WhatsApp Incoming Messages
+// --------------------------------------------------
 
-app.post("/webhook", (req, res) => {
-  console.log("=================================");
+app.post("/webhook", async (req, res) => {
+  console.log("================================");
   console.log("WHATSAPP WEBHOOK RECEIVED");
-  console.log("=================================");
-
   console.log(JSON.stringify(req.body, null, 2));
+  console.log("================================");
 
-  // Tell Meta immediately that webhook was received
+  // Respond to Meta immediately
   res.sendStatus(200);
 
-  processWhatsAppMessage(req.body).catch((error) => {
-    console.error(
-      "MESSAGE PROCESSING ERROR:",
-      error.response?.data || error.message
-    );
-  });
-});
-
-/*
-====================================================
-CONVERSATION MEMORY
-====================================================
-*/
-
-const conversations = {};
-
-/*
-====================================================
-AI SYSTEM INSTRUCTION
-====================================================
-*/
-
-const SYSTEM_INSTRUCTION = `
-তুমি একজন সহায়ক বাংলা AI assistant।
-
-তুমি WhatsApp-এ ব্যবহারকারীর সঙ্গে স্বাভাবিকভাবে কথা বলবে।
-
-নিয়ম:
-
-1. বাংলায় সহজ, পরিষ্কার এবং সংক্ষিপ্তভাবে উত্তর দেবে।
-2. WhatsApp-এর জন্য Markdown table ব্যবহার করবে না।
-3. খুব বড় উত্তর দেবে না।
-4. ব্যবহারকারী ইংরেজিতে প্রশ্ন করলে ইংরেজিতেও উত্তর দিতে পারো।
-5. ট্রেন সম্পর্কিত প্রশ্ন হলে যতটা সম্ভব নির্ভুল তথ্য দেবে।
-6. ট্রেনের সময়, স্টেশন, ট্রেন নম্বর বা বর্তমান তথ্য সম্পর্কে নিশ্চিত না হলে অনুমান করবে না।
-7. প্রয়োজনে ব্যবহারকারীকে NTES বা Indian Railways-এর official source-এ যাচাই করতে বলবে।
-8. ব্যবহারকারী যদি সাধারণ প্রশ্ন করে, স্বাভাবিক AI assistant-এর মতো উত্তর দেবে।
-9. নিজের পরিচয় জানতে চাইলে বলবে তুমি একটি WhatsApp AI assistant।
-10. উত্তর WhatsApp-এর উপযোগী ছোট ছোট paragraph বা list আকারে দেবে।
-`;
-
-/*
-====================================================
-PROCESS WHATSAPP MESSAGE
-====================================================
-*/
-
-async function processWhatsAppMessage(body) {
   try {
-    const value =
-      body?.entry?.[0]?.changes?.[0]?.value;
+    const value = req.body?.entry?.[0]?.changes?.[0]?.value;
 
-    const message =
-      value?.messages?.[0];
+    if (!value) {
+      return;
+    }
 
+    const message = value.messages?.[0];
+
+    // Ignore status updates
     if (!message) {
-      console.log("No user message. Probably status/update event.");
+      console.log("No user message. Probably a status update.");
       return;
     }
 
     const from = message.from;
-
-    console.log("Message sender:", from);
-
-    /*
-    -----------------------------------------------
-    TEXT MESSAGE
-    -----------------------------------------------
-    */
-
     const text = message.text?.body;
+
+    if (!from) {
+      return;
+    }
 
     if (!text) {
       await sendWhatsAppMessage(
         from,
-        "দুঃখিত, আমি বর্তমানে শুধু text message বুঝতে পারি।"
+        "দুঃখিত, আমি এখন শুধু লেখা মেসেজ বুঝতে পারি।"
       );
-
       return;
     }
 
-    console.log("User message:", text);
+    console.log("User:", from);
+    console.log("Message:", text);
 
-    /*
-    -----------------------------------------------
-    CREATE USER MEMORY
-    -----------------------------------------------
-    */
+    const reply = await callGemini(text);
 
-    if (!conversations[from]) {
-      conversations[from] = [];
-    }
+    console.log("AI Reply:", reply);
 
-    conversations[from].push({
-      role: "user",
-      parts: [
-        {
-          text: text
-        }
-      ]
-    });
+    await sendWhatsAppMessage(from, reply);
 
-    /*
-    -----------------------------------------------
-    GEMINI
-    -----------------------------------------------
-    */
-
-    const aiReply =
-      await callGemini(conversations[from]);
-
-    /*
-    -----------------------------------------------
-    SAVE AI RESPONSE
-    -----------------------------------------------
-    */
-
-    conversations[from].push({
-      role: "model",
-      parts: [
-        {
-          text: aiReply
-        }
-      ]
-    });
-
-    /*
-    -----------------------------------------------
-    LIMIT MEMORY
-    -----------------------------------------------
-    */
-
-    if (conversations[from].length > 20) {
-      conversations[from] =
-        conversations[from].slice(-20);
-    }
-
-    console.log("AI reply:", aiReply);
-
-    /*
-    -----------------------------------------------
-    SEND WHATSAPP REPLY
-    -----------------------------------------------
-    */
-
-    await sendWhatsAppMessage(
-      from,
-      aiReply
-    );
-
-    console.log("WhatsApp reply sent successfully.");
   } catch (error) {
     console.error(
-      "processWhatsAppMessage ERROR:",
+      "Webhook processing error:",
+      error.response?.data || error.message
+    );
+  }
+});
+
+// --------------------------------------------------
+// Gemini AI
+// --------------------------------------------------
+
+async function callGemini(userMessage) {
+
+  if (!GEMINI_API_KEY) {
+    console.error("GEMINI_API_KEY is missing.");
+    return "দুঃখিত, AI service এখন configure করা হয়নি।";
+  }
+
+  const systemInstruction =
+`তুমি একজন সহায়ক বাংলা AI assistant।
+
+তুমি মূলত Eastern Railway এবং Sealdah Division-এর ট্রেন সম্পর্কিত প্রশ্নের উত্তর দেবে।
+
+ব্যবহারকারী বাংলায় প্রশ্ন করলে বাংলায় উত্তর দেবে।
+
+উত্তর সংক্ষিপ্ত, সহজ এবং পরিষ্কার হবে।
+
+ট্রেন সম্পর্কিত প্রশ্ন হলে:
+- ট্রেনের নাম বা নম্বর
+- কোথা থেকে ছাড়ে
+- কখন ছাড়ে
+- কোথায় যায়
+- পৌঁছানোর সময়
+
+যদি নিশ্চিত তথ্য না থাকে তাহলে অনুমান করে সময় বলবে না।
+
+প্রয়োজনে ব্যবহারকারীকে NTES বা Indian Railways-এর official enquiry system-এ যাচাই করতে বলবে।
+
+সাধারণ প্রশ্ন করলে সাধারণভাবেই সাহায্য করবে।
+
+WhatsApp-এর জন্য Markdown table ব্যবহার করবে না।`;
+
+  const url =
+`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
+
+  const body = {
+    system_instruction: {
+      parts: [
+        {
+          text: systemInstruction
+        }
+      ]
+    },
+    contents: [
+      {
+        role: "user",
+        parts: [
+          {
+            text: userMessage
+          }
+        ]
+      }
+    ]
+  };
+
+  try {
+
+    const response = await axios.post(url, body, {
+      headers: {
+        "Content-Type": "application/json"
+      },
+      timeout: 30000
+    });
+
+    const parts =
+      response.data?.candidates?.[0]?.content?.parts || [];
+
+    const reply = parts
+      .map(part => part.text || "")
+      .join("")
+      .trim();
+
+    if (!reply) {
+      return "দুঃখিত, এই মুহূর্তে উত্তর দিতে পারছি না।";
+    }
+
+    return reply.substring(0, 4000);
+
+  } catch (error) {
+
+    console.error(
+      "Gemini error:",
+      error.response?.data || error.message
+    );
+
+    return "দুঃখিত, AI service থেকে এখন উত্তর পাওয়া যাচ্ছে না। একটু পরে আবার চেষ্টা করুন।";
+  }
+}
+
+// --------------------------------------------------
+// Send WhatsApp Message
+// --------------------------------------------------
+
+async function sendWhatsAppMessage(to, text) {
+
+  if (!WHATSAPP_TOKEN) {
+    console.error("WHATSAPP_TOKEN is missing.");
+    return;
+  }
+
+  if (!PHONE_NUMBER_ID) {
+    console.error("PHONE_NUMBER_ID is missing.");
+    return;
+  }
+
+  const url =
+`https://graph.facebook.com/v20.0/${PHONE_NUMBER_ID}/messages`;
+
+  try {
+
+    await axios.post(
+      url,
+      {
+        messaging_product: "whatsapp",
+        recipient_type: "individual",
+        to: to,
+        type: "text",
+        text: {
+          preview_url: false,
+          body: text
+        }
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${WHATSAPP_TOKEN}`,
+          "Content-Type": "application/json"
+        },
+        timeout: 30000
+      }
+    );
+
+    console.log("WhatsApp message sent to:", to);
+
+  } catch (error) {
+
+    console.error(
+      "WhatsApp API error:",
       error.response?.data || error.message
     );
   }
 }
 
-/*
-====================================================
-GOOGLE GEMINI
-====================================================
-*/
+// --------------------------------------------------
+// Start Server
+// --------------------------------------------------
 
-async function callGemini(history) {
-  if (!GEMINI_API_KEY) {
-    throw new Error(
-      "GEMINI_API_KEY is missing."
-    );
-  }
+app.listen(PORT, "0.0.0.0", () => {
 
-  const url =
-    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateC_
-```
+  console.log("================================");
+  console.log("WhatsApp AI Bot is running.");
+  console.log(`Server running on port ${PORT}`);
+  console.log(`Health: /api`);
+  console.log(`Webhook: /webhook`);
+  console.log("================================");
+
+});
