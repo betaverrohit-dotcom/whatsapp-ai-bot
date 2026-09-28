@@ -1,3 +1,4 @@
+```javascript
 require("dotenv").config();
 
 const express = require("express");
@@ -26,7 +27,11 @@ app.get("/", (req, res) => {
 });
 
 app.get("/api", (req, res) => {
-  res.status(200).json({ status: "ok" });
+  res.status(200).json({
+    status: "ok",
+    whatsapp: "connected",
+    ai: "ready"
+  });
 });
 
 // --------------------------------------------------
@@ -54,11 +59,18 @@ Users may contact the bot owner to request deletion of their information.`
 // --------------------------------------------------
 
 app.get("/webhook", (req, res) => {
+
   console.log("================================");
   console.log("META WEBHOOK VERIFICATION");
   console.log("Mode:", req.query["hub.mode"]);
-  console.log("Token received:", req.query["hub.verify_token"] ? "YES" : "NO");
-  console.log("Challenge:", req.query["hub.challenge"] ? "YES" : "NO");
+  console.log(
+    "Token received:",
+    req.query["hub.verify_token"] ? "YES" : "NO"
+  );
+  console.log(
+    "Challenge:",
+    req.query["hub.challenge"] ? "YES" : "NO"
+  );
   console.log("================================");
 
   const mode = req.query["hub.mode"];
@@ -66,11 +78,14 @@ app.get("/webhook", (req, res) => {
   const challenge = req.query["hub.challenge"];
 
   if (mode === "subscribe" && token === VERIFY_TOKEN) {
+
     console.log("Webhook verification successful.");
+
     return res.status(200).send(challenge);
   }
 
   console.log("Webhook verification failed.");
+
   return res.sendStatus(403);
 });
 
@@ -79,6 +94,7 @@ app.get("/webhook", (req, res) => {
 // --------------------------------------------------
 
 app.post("/webhook", async (req, res) => {
+
   console.log("================================");
   console.log("WHATSAPP WEBHOOK RECEIVED");
   console.log(JSON.stringify(req.body, null, 2));
@@ -88,9 +104,12 @@ app.post("/webhook", async (req, res) => {
   res.sendStatus(200);
 
   try {
-    const value = req.body?.entry?.[0]?.changes?.[0]?.value;
+
+    const value =
+      req.body?.entry?.[0]?.changes?.[0]?.value;
 
     if (!value) {
+      console.log("Webhook value missing.");
       return;
     }
 
@@ -98,7 +117,11 @@ app.post("/webhook", async (req, res) => {
 
     // Ignore status updates
     if (!message) {
-      console.log("No user message. Probably a status update.");
+
+      console.log(
+        "No user message. Probably a status update."
+      );
+
       return;
     }
 
@@ -106,31 +129,44 @@ app.post("/webhook", async (req, res) => {
     const text = message.text?.body;
 
     if (!from) {
+      console.log("Sender number missing.");
       return;
     }
 
     if (!text) {
+
       await sendWhatsAppMessage(
         from,
         "দুঃখিত, আমি এখন শুধু লেখা মেসেজ বুঝতে পারি।"
       );
+
       return;
     }
 
     console.log("User:", from);
     console.log("Message:", text);
 
+    // ------------------------------------------------
+    // Call Gemini
+    // ------------------------------------------------
+
     const reply = await callGemini(text);
 
     console.log("AI Reply:", reply);
 
+    // ------------------------------------------------
+    // Send WhatsApp reply
+    // ------------------------------------------------
+
     await sendWhatsAppMessage(from, reply);
 
   } catch (error) {
+
     console.error(
       "Webhook processing error:",
       error.response?.data || error.message
     );
+
   }
 });
 
@@ -141,7 +177,9 @@ app.post("/webhook", async (req, res) => {
 async function callGemini(userMessage) {
 
   if (!GEMINI_API_KEY) {
+
     console.error("GEMINI_API_KEY is missing.");
+
     return "দুঃখিত, AI service এখন configure করা হয়নি।";
   }
 
@@ -167,63 +205,186 @@ async function callGemini(userMessage) {
 
 সাধারণ প্রশ্ন করলে সাধারণভাবেই সাহায্য করবে।
 
-WhatsApp-এর জন্য Markdown table ব্যবহার করবে না।`;
+WhatsApp-এর জন্য Markdown table ব্যবহার করবে না।
 
-  const url =
-`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
+কোনো তথ্য নিশ্চিত না হলে স্পষ্টভাবে বলবে যে তথ্যটি নিশ্চিত নয়।`;
 
-  const body = {
-    system_instruction: {
-      parts: [
-        {
-          text: systemInstruction
-        }
-      ]
-    },
-    contents: [
-      {
-        role: "user",
+  // ------------------------------------------------
+  // Models to try
+  // ------------------------------------------------
+
+  const models = [
+    GEMINI_MODEL,
+    "gemini-3.8-flash",
+    "gemini-3.8-flash-lite"
+  ];
+
+  // Remove duplicates
+  const uniqueModels = [...new Set(models)];
+
+  let lastError = null;
+
+  // ------------------------------------------------
+  // Try models
+  // ------------------------------------------------
+
+  for (const model of uniqueModels) {
+
+    console.log("Trying Gemini model:", model);
+
+    const url =
+`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
+
+    const body = {
+
+      system_instruction: {
         parts: [
           {
-            text: userMessage
+            text: systemInstruction
           }
         ]
-      }
-    ]
-  };
-
-  try {
-
-    const response = await axios.post(url, body, {
-      headers: {
-        "Content-Type": "application/json"
       },
-      timeout: 30000
-    });
 
-    const parts =
-      response.data?.candidates?.[0]?.content?.parts || [];
+      contents: [
+        {
+          role: "user",
+          parts: [
+            {
+              text: userMessage
+            }
+          ]
+        }
+      ]
+    };
 
-    const reply = parts
-      .map(part => part.text || "")
-      .join("")
-      .trim();
+    // ------------------------------------------------
+    // Retry up to 3 times
+    // ------------------------------------------------
 
-    if (!reply) {
-      return "দুঃখিত, এই মুহূর্তে উত্তর দিতে পারছি না।";
+    for (let attempt = 1; attempt <= 3; attempt++) {
+
+      try {
+
+        console.log(
+          `Gemini attempt ${attempt}/3 using ${model}`
+        );
+
+        const response = await axios.post(
+          url,
+          body,
+          {
+            headers: {
+              "Content-Type": "application/json"
+            },
+
+            timeout: 30000
+          }
+        );
+
+        const parts =
+          response.data?.candidates?.[0]?.content?.parts || [];
+
+        const reply = parts
+          .map(part => part.text || "")
+          .join("")
+          .trim();
+
+        if (reply) {
+
+          console.log(
+            `Gemini success using ${model}`
+          );
+
+          return reply.substring(0, 4000);
+        }
+
+        console.log(
+          "Gemini returned empty response."
+        );
+
+      } catch (error) {
+
+        lastError =
+          error.response?.data || error.message;
+
+        const status =
+          error.response?.status;
+
+        console.error(
+          `Gemini error on attempt ${attempt}:`,
+          lastError
+        );
+
+        // --------------------------------------------
+        // Model unavailable / not found
+        // --------------------------------------------
+
+        if (
+          status === 404 ||
+          error.response?.data?.error?.status === "NOT_FOUND"
+        ) {
+
+          console.log(
+            `Model ${model} unavailable. Trying next model.`
+          );
+
+          break;
+        }
+
+        // --------------------------------------------
+        // Rate limit / server busy / temporary error
+        // --------------------------------------------
+
+        if (
+          status === 429 ||
+          status === 500 ||
+          status === 502 ||
+          status === 503 ||
+          status === 504
+        ) {
+
+          if (attempt < 3) {
+
+            const waitTime =
+              attempt === 1
+                ? 3000
+                : attempt === 2
+                  ? 7000
+                  : 12000;
+
+            console.log(
+              `Waiting ${waitTime}ms before retry...`
+            );
+
+            await sleep(waitTime);
+
+            continue;
+          }
+        }
+
+        // Other errors
+        break;
+      }
     }
-
-    return reply.substring(0, 4000);
-
-  } catch (error) {
-
-    console.error(
-      "Gemini error:",
-      error.response?.data || error.message
-    );
-
-    return "দুঃখিত, AI service থেকে এখন উত্তর পাওয়া যাচ্ছে না। একটু পরে আবার চেষ্টা করুন।";
   }
+
+  console.error(
+    "All Gemini attempts failed:",
+    lastError
+  );
+
+  return "দুঃখিত, AI service এই মুহূর্তে ব্যস্ত আছে। ১০-১৫ সেকেন্ড পরে আবার চেষ্টা করুন।";
+}
+
+// --------------------------------------------------
+// Sleep helper
+// --------------------------------------------------
+
+function sleep(ms) {
+
+  return new Promise(resolve => {
+    setTimeout(resolve, ms);
+  });
 }
 
 // --------------------------------------------------
@@ -233,12 +394,29 @@ WhatsApp-এর জন্য Markdown table ব্যবহার করবে �
 async function sendWhatsAppMessage(to, text) {
 
   if (!WHATSAPP_TOKEN) {
-    console.error("WHATSAPP_TOKEN is missing.");
+
+    console.error(
+      "WHATSAPP_TOKEN is missing."
+    );
+
     return;
   }
 
   if (!PHONE_NUMBER_ID) {
-    console.error("PHONE_NUMBER_ID is missing.");
+
+    console.error(
+      "PHONE_NUMBER_ID is missing."
+    );
+
+    return;
+  }
+
+  if (!to) {
+
+    console.error(
+      "WhatsApp recipient number is missing."
+    );
+
     return;
   }
 
@@ -248,27 +426,41 @@ async function sendWhatsAppMessage(to, text) {
   try {
 
     await axios.post(
+
       url,
+
       {
         messaging_product: "whatsapp",
+
         recipient_type: "individual",
+
         to: to,
+
         type: "text",
+
         text: {
           preview_url: false,
           body: text
         }
       },
+
       {
         headers: {
-          Authorization: `Bearer ${WHATSAPP_TOKEN}`,
-          "Content-Type": "application/json"
+          Authorization:
+            `Bearer ${WHATSAPP_TOKEN}`,
+
+          "Content-Type":
+            "application/json"
         },
+
         timeout: 30000
       }
     );
 
-    console.log("WhatsApp message sent to:", to);
+    console.log(
+      "WhatsApp message sent to:",
+      to
+    );
 
   } catch (error) {
 
@@ -283,13 +475,30 @@ async function sendWhatsAppMessage(to, text) {
 // Start Server
 // --------------------------------------------------
 
-app.listen(PORT, "0.0.0.0", () => {
+app.listen(
+  PORT,
+  "0.0.0.0",
+  () => {
 
-  console.log("================================");
-  console.log("WhatsApp AI Bot is running.");
-  console.log(`Server running on port ${PORT}`);
-  console.log(`Health: /api`);
-  console.log(`Webhook: /webhook`);
-  console.log("================================");
+    console.log("================================");
 
-});
+    console.log(
+      "WhatsApp AI Bot is running."
+    );
+
+    console.log(
+      `Server running on port ${PORT}`
+    );
+
+    console.log(
+      "Health: /api"
+    );
+
+    console.log(
+      "Webhook: /webhook"
+    );
+
+    console.log("================================");
+  }
+);
+```
