@@ -1,8 +1,9 @@
+```javascript
 const express = require("express");
 const axios = require("axios");
-const Groq = require("groq-sdk");
 
 const app = express();
+
 app.use(express.json());
 
 const PORT = process.env.PORT || 10000;
@@ -15,17 +16,17 @@ const GROQ_API_KEY = process.env.GROQ_API_KEY;
 const GROQ_MODEL =
   process.env.GROQ_MODEL || "openai/gpt-oss-20b";
 
-const groq = new Groq({
-  apiKey: GROQ_API_KEY
-});
-
 /* =========================================
-   HOME / HEALTH CHECK
+   HOME
 ========================================= */
 
 app.get("/", (req, res) => {
-  res.send("Sealdah Train AI WhatsApp Bot is running.");
+  res.send("Sealdah Train Service WhatsApp AI Bot is running.");
 });
+
+/* =========================================
+   HEALTH CHECK
+========================================= */
 
 app.get("/api", (req, res) => {
   res.json({
@@ -45,14 +46,14 @@ app.get("/webhook", (req, res) => {
   const token = req.query["hub.verify_token"];
   const challenge = req.query["hub.challenge"];
 
-  console.log("Webhook verification request received");
+  console.log("Webhook verification request received.");
 
   if (mode === "subscribe" && token === VERIFY_TOKEN) {
-    console.log("Webhook verified successfully");
+    console.log("Webhook verified successfully.");
     return res.status(200).send(challenge);
   }
 
-  console.log("Webhook verification failed");
+  console.log("Webhook verification failed.");
 
   return res.sendStatus(403);
 });
@@ -83,14 +84,20 @@ app.post("/webhook", async (req, res) => {
 
     const message = messages[0];
 
-    // We currently process text messages only
+    // Only text messages
     if (message.type !== "text") {
       return res.sendStatus(200);
     }
 
-    // VERY IMPORTANT:
-    // This is the WhatsApp number of the person
-    // who sent the message.
+    /*
+      VERY IMPORTANT
+
+      message.from = যে ব্যক্তি WhatsApp-এ
+      আপনার নম্বরে message করেছে তার নম্বর।
+
+      তাই reply সেই একই নম্বরে যাবে।
+    */
+
     const from = message.from;
 
     const userMessage = message.text?.body?.trim();
@@ -119,84 +126,101 @@ app.post("/webhook", async (req, res) => {
     return res.sendStatus(200);
 
   } catch (error) {
+
     console.error("Webhook error:");
 
     if (error.response) {
-      console.error(error.response.data);
+      console.error(
+        JSON.stringify(error.response.data, null, 2)
+      );
     } else {
       console.error(error.message);
     }
 
-    // Always return 200 to WhatsApp after receiving
-    // the webhook so Meta does not repeatedly resend it.
     return res.sendStatus(200);
   }
 });
 
 /* =========================================
    GROQ AI
+   Direct API using Axios
 ========================================= */
 
 async function getAIReply(userMessage) {
-  try {
-    const completion = await groq.chat.completions.create({
-      model: GROQ_MODEL,
 
-      messages: [
-        {
-          role: "system",
-          content: `
-তুমি "Sealdah Train Service" নামের একটি WhatsApp AI Assistant।
+  try {
+
+    const response = await axios.post(
+      "https://api.groq.com/openai/v1/chat/completions",
+
+      {
+        model: GROQ_MODEL,
+
+        messages: [
+          {
+            role: "system",
+
+            content: `
+তুমি "Sealdah Train Service" WhatsApp AI Assistant।
 
 তোমার কাজ:
-1. বাংলা ভাষায় সহজ ও পরিষ্কারভাবে উত্তর দেওয়া।
-2. ব্যবহারকারী বাংলায় লিখলে বাংলায় উত্তর দেওয়া।
-3. ইংরেজিতে লিখলে ইংরেজিতে উত্তর দেওয়া।
-4. ব্যবহারকারী ট্রেন, শিয়ালদহ ডিভিশন, Eastern Railway, ট্রেনের সময়সূচি,
-   স্টেশন, ট্রেন চলাচল ইত্যাদি সম্পর্কে প্রশ্ন করতে পারে।
-5. তোমার কাছে live railway data না থাকলে কখনো নিজের থেকে ট্রেনের সময়,
-   running status বা live location বানিয়ে বলবে না।
-6. Live data না থাকলে পরিষ্কারভাবে বলবে যে live railway data বর্তমানে
-   available নয়।
-7. খুব অল্প কথায় কিন্তু কাজে লাগে এমন উত্তর দেবে।
-8. অপ্রয়োজনীয় disclaimer বা দীর্ঘ উত্তর দেবে না।
 
-বিশেষভাবে:
-ব্যবহারকারী যদি জিজ্ঞাসা করে:
-"আমি এখন শান্তিপুর থেকে শিয়ালদহ যাব, কোন ট্রেন পাব?"
+1. ব্যবহারকারী বাংলায় লিখলে বাংলায় উত্তর দেবে।
+2. ইংরেজিতে লিখলে ইংরেজিতে উত্তর দেবে।
+3. সহজ, ছোট এবং পরিষ্কার উত্তর দেবে।
+4. ব্যবহারকারী Eastern Railway বা Sealdah Division-এর
+   ট্রেন, স্টেশন, সময়সূচি, ট্রেন চলাচল ইত্যাদি সম্পর্কে প্রশ্ন করতে পারে।
+5. তোমার কাছে live railway data না থাকলে কখনো নিজের থেকে
+   train timing বা live running status বানিয়ে বলবে না।
+6. Live data না থাকলে পরিষ্কারভাবে বলবে যে বর্তমানে live railway
+   data পাওয়া যাচ্ছে না।
+7. অপ্রয়োজনীয় বড় উত্তর দেবে না।
+            `
+          },
 
-তাহলে যদি live timetable data না থাকে, সেটা বানিয়ে বলবে না।
-বলবে যে বর্তমান live timetable data পাওয়া যাচ্ছে না।
+          {
+            role: "user",
+            content: userMessage
+          }
+        ],
 
-তুমি কোনো নির্দিষ্ট ব্যক্তিকে উত্তর দিচ্ছ না।
-যে ব্যক্তি WhatsApp-এ প্রশ্ন করবে, তার প্রশ্নের উত্তর দেবে।
-          `
+        temperature: 0.2,
+
+        max_tokens: 500
+      },
+
+      {
+        headers: {
+          "Authorization": `Bearer ${GROQ_API_KEY}`,
+          "Content-Type": "application/json"
         },
-        {
-          role: "user",
-          content: userMessage
-        }
-      ],
 
-      temperature: 0.2,
-      max_tokens: 500
-    });
-
-    return (
-      completion.choices?.[0]?.message?.content ||
-      "দুঃখিত, এই মুহূর্তে উত্তর তৈরি করা যাচ্ছে না। একটু পরে আবার চেষ্টা করুন।"
+        timeout: 30000
+      }
     );
 
+    const reply =
+      response.data?.choices?.[0]?.message?.content;
+
+    if (reply) {
+      return reply;
+    }
+
+    return "দুঃখিত, এই মুহূর্তে উত্তর তৈরি করা যাচ্ছে না। একটু পরে আবার চেষ্টা করুন।";
+
   } catch (error) {
-    console.error("Groq error:");
+
+    console.error("Groq API error:");
 
     if (error.response) {
-      console.error(error.response.data);
+      console.error(
+        JSON.stringify(error.response.data, null, 2)
+      );
     } else {
       console.error(error.message);
     }
 
-    return "দুঃখিত, AI service থেকে এখন উত্তর পাওয়া যাচ্ছে না। একটু পরে আবার চেষ্টা করুন।";
+    return "দুঃখিত, AI service থেকে এখন উত্তর পাওয়া যাচ্ছে না। একটু পরে আবার চেষ্টা করুন।";
   }
 }
 
@@ -212,6 +236,7 @@ async function sendWhatsAppMessage(to, message) {
   try {
 
     const response = await axios.post(
+
       url,
 
       {
@@ -231,9 +256,11 @@ async function sendWhatsAppMessage(to, message) {
 
       {
         headers: {
-          Authorization: `Bearer ${WHATSAPP_TOKEN}`,
+          "Authorization": `Bearer ${WHATSAPP_TOKEN}`,
           "Content-Type": "application/json"
-        }
+        },
+
+        timeout: 30000
       }
     );
 
@@ -258,10 +285,11 @@ async function sendWhatsAppMessage(to, message) {
 }
 
 /* =========================================
-   PRIVACY PAGE
+   PRIVACY
 ========================================= */
 
 app.get("/privacy", (req, res) => {
+
   res.send(`
     <html>
       <head>
@@ -273,28 +301,23 @@ app.get("/privacy", (req, res) => {
         <h1>Privacy Policy</h1>
 
         <p>
-          Sealdah Train Service WhatsApp AI Bot processes messages
-          sent by users through WhatsApp for the purpose of generating
-          automated responses.
+          Sealdah Train Service WhatsApp AI Bot processes
+          WhatsApp messages to provide automated responses.
         </p>
 
         <p>
-          Messages may be processed by third-party AI services
-          to generate responses.
+          Messages may be processed by an AI service to
+          generate responses.
         </p>
 
         <p>
           We do not intentionally sell personal information.
         </p>
 
-        <p>
-          For questions regarding this service, please contact
-          the service administrator.
-        </p>
-
       </body>
     </html>
   `);
+
 });
 
 /* =========================================
@@ -314,3 +337,4 @@ app.listen(PORT, () => {
   console.log("================================");
 
 });
+```
