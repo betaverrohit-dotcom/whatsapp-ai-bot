@@ -2,401 +2,299 @@ require("dotenv").config();
 
 const express = require("express");
 const axios = require("axios");
+const Groq = require("groq-sdk");
 
 const app = express();
-
 app.use(express.json());
 
 const PORT = process.env.PORT || 10000;
 
-const {
-  VERIFY_TOKEN,
-  WHATSAPP_TOKEN,
-  PHONE_NUMBER_ID,
-  GROQ_API_KEY,
-  GROQ_MODEL = "openai/gpt-oss-20b"
-} = process.env;
+const WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN;
+const PHONE_NUMBER_ID = process.env.PHONE_NUMBER_ID;
+const VERIFY_TOKEN = process.env.VERIFY_TOKEN;
+const GROQ_API_KEY = process.env.GROQ_API_KEY;
 
-
-// ==================================================
-// BASIC ROUTES
-// ==================================================
-
-app.get("/", (req, res) => {
-  res.status(200).send("Sealdah Train Service AI Bot is running.");
+const groq = new Groq({
+  apiKey: GROQ_API_KEY
 });
 
+/*
+========================================
+HEALTH CHECK
+========================================
+*/
+
 app.get("/api", (req, res) => {
-  res.status(200).json({
-    status: "ok",
+  res.json({
+    status: "online",
     service: "Sealdah Train Service AI Bot",
     ai: "Groq",
-    model: GROQ_MODEL
+    model: "openai/gpt-oss-20b"
   });
 });
 
-
-// ==================================================
-// PRIVACY POLICY
-// ==================================================
+/*
+========================================
+PRIVACY PAGE
+========================================
+*/
 
 app.get("/privacy", (req, res) => {
-  res.type("text/plain").send(`
-Privacy Policy
-
-This WhatsApp AI Bot receives messages sent by users through WhatsApp.
-
-Messages may be processed by an AI service to generate responses.
-
-The bot is designed to provide information about Indian Railway and Sealdah Division train services.
-
-Conversation information may be temporarily processed to provide responses.
-
-We do not sell personal information.
-
-Users may contact the bot owner regarding information or deletion requests.
-`);
+  res.send(`
+    <html>
+      <head>
+        <title>Privacy Policy</title>
+      </head>
+      <body>
+        <h1>WhatsApp AI Bot Privacy Policy</h1>
+        <p>This service processes WhatsApp messages to provide automated replies.</p>
+        <p>Messages are processed only for providing the requested service.</p>
+      </body>
+    </html>
+  `);
 });
 
-
-// ==================================================
-// META WEBHOOK VERIFICATION
-// ==================================================
+/*
+========================================
+WHATSAPP WEBHOOK VERIFICATION
+========================================
+*/
 
 app.get("/webhook", (req, res) => {
-
-  console.log("================================");
-  console.log("META WEBHOOK VERIFICATION");
-  console.log("================================");
-
   const mode = req.query["hub.mode"];
   const token = req.query["hub.verify_token"];
   const challenge = req.query["hub.challenge"];
 
-  console.log("Mode:", mode);
-  console.log("Token received:", token ? "YES" : "NO");
-  console.log("Challenge:", challenge ? "YES" : "NO");
-
   if (mode === "subscribe" && token === VERIFY_TOKEN) {
-
-    console.log("Webhook verification successful.");
-
+    console.log("WhatsApp Webhook Verified");
     return res.status(200).send(challenge);
   }
-
-  console.log("Webhook verification failed.");
 
   return res.sendStatus(403);
 });
 
+/*
+========================================
+SEND WHATSAPP MESSAGE
+========================================
 
-// ==================================================
-// WHATSAPP INCOMING MESSAGE
-// ==================================================
+IMPORTANT:
 
-app.post("/webhook", async (req, res) => {
+The "to" number is received from message.from.
 
-  console.log("================================");
-  console.log("WHATSAPP WEBHOOK RECEIVED");
-  console.log("================================");
-
-  console.log(JSON.stringify(req.body, null, 2));
-
-  // Meta-কে সঙ্গে সঙ্গে 200 response
-  res.sendStatus(200);
-
-  try {
-
-    const value =
-      req.body?.entry?.[0]?.changes?.[0]?.value;
-
-    if (!value) {
-      console.log("No webhook value.");
-      return;
-    }
-
-    // Status update হলে messages থাকবে না
-    const message = value.messages?.[0];
-
-    if (!message) {
-      console.log("No user message. Probably a status update.");
-      return;
-    }
-
-    // যে নম্বর থেকে WhatsApp message এসেছে
-    const from = message.from;
-
-    // User-এর text
-    const text = message.text?.body;
-
-    if (!from) {
-      console.log("Sender number not found.");
-      return;
-    }
-
-    console.log("Message received from:", from);
-
-    // Text না হলে
-    if (!text) {
-
-      await sendWhatsAppMessage(
-        from,
-        "দুঃখিত, আমি এখন শুধু লেখা মেসেজ বুঝতে পারি।"
-      );
-
-      return;
-    }
-
-    console.log("User message:", text);
-
-    // AI response
-    const reply = await callGroq(text);
-
-    console.log("AI reply:", reply);
-
-    // IMPORTANT:
-    // যে নম্বর থেকে message এসেছে,
-    // reply সেই নম্বরেই যাবে
-    await sendWhatsAppMessage(from, reply);
-
-  } catch (error) {
-
-    console.error(
-      "Webhook processing error:",
-      error.response?.data || error.message
-    );
-
-  }
-
-});
-
-
-// ==================================================
-// GROQ AI
-// ==================================================
-
-async function callGroq(userMessage) {
-
-  if (!GROQ_API_KEY) {
-
-    console.error("GROQ_API_KEY is missing.");
-
-    return "দুঃখিত, AI service এখন configure করা হয়নি।";
-  }
-
-  const systemPrompt = `
-তুমি "Sealdah Train Service" WhatsApp AI Assistant।
-
-তোমার প্রধান কাজ হলো Indian Railways এবং বিশেষ করে Eastern Railway ও Sealdah Division-এর ট্রেন সংক্রান্ত তথ্য নিয়ে ব্যবহারকারীকে সাহায্য করা।
-
-ব্যবহারকারী বাংলায় প্রশ্ন করলে বাংলায় উত্তর দেবে।
-
-উত্তর সহজ, ছোট এবং পরিষ্কার হবে।
-
-ব্যবহারকারী যদি ট্রেন সম্পর্কে প্রশ্ন করে তাহলে সম্ভব হলে:
-
-• ট্রেনের নাম
-• ট্রেন নম্বর
-• কোথা থেকে ছাড়ে
-• কখন ছাড়ে
-• কোন স্টেশনে যায়
-• পৌঁছানোর সময়
-• route
-• available information
-
-দেবে।
-
-গুরুত্বপূর্ণ:
-
-তুমি নিশ্চিত না হলে কোনো ট্রেনের সময় বা live running status অনুমান করে বলবে না।
-
-Live train location বা বর্তমান running status নিশ্চিতভাবে জানা না থাকলে পরিষ্কারভাবে বলবে যে live data যাচাই করা প্রয়োজন।
-
-ব্যবহারকারী চাইলে তাকে NTES বা Indian Railways-এর official enquiry system-এ যাচাই করতে বলবে।
-
-সাধারণ প্রশ্ন করলে সাধারণভাবেও সাহায্য করবে।
-
-WhatsApp-এর জন্য Markdown table ব্যবহার করবে না।
-
-উত্তর খুব বেশি বড় করবে না।
-
-ব্যবহারকারী যদি শুধু "Hi", "Hello", "হ্যালো" ইত্যাদি বলে, তাহলে স্বাভাবিকভাবে অভিবাদন জানিয়ে বলবে যে সে ট্রেনের নাম, নম্বর বা route লিখে জানতে পারে।
-
-উদাহরণ:
-
-User:
-Sealdah থেকে Santipur যাওয়ার ট্রেন কখন?
-
-Assistant:
-শিয়ালদহ থেকে শান্তিপুর যাওয়ার ট্রেনের সময় জানতে আপনি চাইলে ট্রেনের নাম বা "Sealdah to Santipur today" লিখতে পারেন।
-
-সবসময় বাস্তব তথ্য নিশ্চিত না হলে সময় বানিয়ে বলবে না।
-`;
-
-  const url = "https://api.groq.com/openai/v1/chat/completions";
-
-  try {
-
-    const response = await axios.post(
-      url,
-      {
-        model: GROQ_MODEL,
-
-        messages: [
-          {
-            role: "system",
-            content: systemPrompt
-          },
-          {
-            role: "user",
-            content: userMessage
-          }
-        ],
-
-        temperature: 0.2,
-
-        max_tokens: 700
-      },
-      {
-        headers: {
-          "Authorization": `Bearer ${GROQ_API_KEY}`,
-          "Content-Type": "application/json"
-        },
-
-        timeout: 30000
-      }
-    );
-
-    const reply =
-      response.data?.choices?.[0]?.message?.content
-        ?.trim();
-
-    if (!reply) {
-
-      return "দুঃখিত, এই মুহূর্তে AI থেকে কোনো উত্তর পাওয়া যাচ্ছে না।";
-    }
-
-    // WhatsApp message maximum safe length
-    return reply.substring(0, 4000);
-
-  } catch (error) {
-
-    console.error(
-      "Groq API error:",
-      error.response?.data || error.message
-    );
-
-    return "দুঃখিত, AI service থেকে এখন উত্তর পাওয়া যাচ্ছে না। একটু পরে আবার চেষ্টা করুন।";
-  }
-
-}
-
-
-// ==================================================
-// SEND WHATSAPP MESSAGE
-// ==================================================
+Therefore the reply goes back to the SAME
+WhatsApp number that sent the message.
+*/
 
 async function sendWhatsAppMessage(to, text) {
-
-  if (!WHATSAPP_TOKEN) {
-
-    console.error("WHATSAPP_TOKEN is missing.");
-
-    return;
-  }
-
-  if (!PHONE_NUMBER_ID) {
-
-    console.error("PHONE_NUMBER_ID is missing.");
-
-    return;
-  }
-
-  if (!to) {
-
-    console.error("Recipient number is missing.");
-
-    return;
-  }
-
-  const url =
-    `https://graph.facebook.com/v20.0/${PHONE_NUMBER_ID}/messages`;
-
   try {
+    const url =
+      `https://graph.facebook.com/v22.0/${PHONE_NUMBER_ID}/messages`;
 
-    const response = await axios.post(
+    await axios.post(
       url,
-
       {
         messaging_product: "whatsapp",
-
         recipient_type: "individual",
-
-        // IMPORTANT:
-        // from = যে user message করেছে
-        // তাই reply সেই user-এর নম্বরেই যাবে
         to: to,
-
         type: "text",
-
         text: {
           preview_url: false,
           body: text
         }
       },
-
       {
         headers: {
           Authorization: `Bearer ${WHATSAPP_TOKEN}`,
           "Content-Type": "application/json"
-        },
-
-        timeout: 30000
+        }
       }
     );
 
-    console.log(
-      "WhatsApp reply sent successfully to:",
-      to
+    console.log("Reply sent to:", to);
+
+  } catch (error) {
+    console.error(
+      "WhatsApp Send Error:",
+      error.response?.data || error.message
+    );
+  }
+}
+
+/*
+========================================
+AI RESPONSE
+========================================
+*/
+
+async function generateAIReply(userMessage) {
+  try {
+    const completion = await groq.chat.completions.create({
+      model: "openai/gpt-oss-20b",
+      temperature: 0.2,
+      max_tokens: 700,
+
+      messages: [
+        {
+          role: "system",
+          content: `
+তুমি "Sealdah Train Service" WhatsApp AI Assistant।
+
+তোমার কাজ:
+
+1. বাংলা ভাষায় সহজভাবে উত্তর দেওয়া।
+2. ইংরেজিতে প্রশ্ন করলে ইংরেজিতে উত্তর দেওয়া।
+3. Sealdah Division এবং Indian Railways সম্পর্কিত তথ্য দিতে সাহায্য করা।
+4. Train number, train name, source, destination, station এবং timing সম্পর্কিত প্রশ্ন বুঝতে চেষ্টা করা।
+5. তথ্য নিশ্চিত না হলে অনুমান করে নির্দিষ্ট সময় বা live status তৈরি করবে না।
+6. Live train status-এর জন্য ব্যবহারকারীকে train number এবং journey date দিতে বলবে।
+7. Source এবং destination দেওয়া হলে কোন তথ্য প্রয়োজন তা পরিষ্কারভাবে জানাবে।
+8. উত্তর ছোট, পরিষ্কার এবং WhatsApp-friendly হবে।
+
+গুরুত্বপূর্ণ:
+তুমি কোনো live railway database access আছে বলে মিথ্যা দাবি করবে না।
+যে তথ্য নিশ্চিত নয় সেটিকে নিশ্চিত তথ্য হিসেবে বলবে না।
+          `
+        },
+        {
+          role: "user",
+          content: userMessage
+        }
+      ]
+    });
+
+    return (
+      completion.choices?.[0]?.message?.content ||
+      "দুঃখিত, এই মুহূর্তে উত্তর তৈরি করা যাচ্ছে না।"
     );
 
-    console.log(
-      "WhatsApp API response:",
-      JSON.stringify(response.data)
+  } catch (error) {
+    console.error("Groq Error:", error);
+
+    return "দুঃখিত, AI service এই মুহূর্তে ব্যস্ত আছে। কিছুক্ষণ পরে আবার চেষ্টা করুন।";
+  }
+}
+
+/*
+========================================
+WHATSAPP INCOMING MESSAGE
+========================================
+*/
+
+app.post("/webhook", async (req, res) => {
+
+  /*
+  IMPORTANT:
+  WhatsApp expects a quick 200 response.
+  */
+
+  res.sendStatus(200);
+
+  try {
+
+    const entry = req.body?.entry?.[0];
+
+    const changes = entry?.changes?.[0];
+
+    const value = changes?.value;
+
+    const messages = value?.messages;
+
+    if (!messages || messages.length === 0) {
+      return;
+    }
+
+    const message = messages[0];
+
+    /*
+    ========================================
+    THIS IS THE IMPORTANT PART
+    ========================================
+
+    message.from = WhatsApp number of the person
+    who sent the message.
+
+    We MUST reply to this number.
+    */
+
+    const from = message.from;
+
+    console.log("Incoming message from:", from);
+
+    /*
+    ========================================
+    ONLY PROCESS TEXT MESSAGES
+    ========================================
+    */
+
+    if (message.type !== "text") {
+
+      await sendWhatsAppMessage(
+        from,
+        "দুঃখিত, আপাতত আমি শুধুমাত্র text message গ্রহণ করতে পারি।"
+      );
+
+      return;
+    }
+
+    const userMessage =
+      message.text?.body?.trim();
+
+    if (!userMessage) {
+      return;
+    }
+
+    console.log("User message:", userMessage);
+
+    /*
+    ========================================
+    GENERATE AI REPLY
+    ========================================
+    */
+
+    const reply =
+      await generateAIReply(userMessage);
+
+    console.log("AI reply:", reply);
+
+    /*
+    ========================================
+    SEND TO SAME USER
+    ========================================
+    */
+
+    await sendWhatsAppMessage(
+      from,
+      reply
     );
 
   } catch (error) {
 
     console.error(
-      "WhatsApp API error:",
-      error.response?.data || error.message
+      "Webhook Error:",
+      error.response?.data || error.message || error
     );
+
   }
 
-}
+});
 
+/*
+========================================
+START SERVER
+========================================
+*/
 
-// ==================================================
-// START SERVER
-// ==================================================
-
-app.listen(PORT, "0.0.0.0", () => {
+app.listen(PORT, () => {
 
   console.log("================================");
   console.log("Sealdah Train Service AI Bot");
   console.log("================================");
 
   console.log("Server running on port:", PORT);
-
-  console.log("Health:", "/api");
-
-  console.log("Webhook:", "/webhook");
-
-  console.log("Privacy:", "/privacy");
-
-  console.log("AI:", "Groq");
-
-  console.log("Model:", GROQ_MODEL);
+  console.log("Health: /api");
+  console.log("Webhook: /webhook");
+  console.log("Privacy: /privacy");
 
   console.log(
     "Groq API Key:",
@@ -414,5 +312,4 @@ app.listen(PORT, "0.0.0.0", () => {
   );
 
   console.log("================================");
-
 });
