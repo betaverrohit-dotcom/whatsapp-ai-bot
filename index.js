@@ -1,554 +1,316 @@
-require("dotenv").config();
-
 const express = require("express");
-const axios = require("axios");
 
 const app = express();
-
 app.use(express.json());
 
 const PORT = process.env.PORT || 10000;
 
-const {
-  VERIFY_TOKEN,
-  WHATSAPP_TOKEN,
-  PHONE_NUMBER_ID,
-  GEMINI_API_KEY,
-  GEMINI_MODEL = "gemini-2.5-flash"
-} = process.env;
+// ===============================
+// ENVIRONMENT VARIABLES
+// ===============================
+const VERIFY_TOKEN = process.env.VERIFY_TOKEN;
+const WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN;
+const PHONE_NUMBER_ID = process.env.PHONE_NUMBER_ID;
 
+const GROQ_API_KEY = process.env.GROQ_API_KEY;
+const GROQ_MODEL =
+  process.env.GROQ_MODEL || "openai/gpt-oss-20b";
 
-// ==================================================
-// HOME
-// ==================================================
+// ===============================
+// BASIC CHECK
+// ===============================
+console.log("================================");
+console.log("WhatsApp AI Bot is starting...");
+console.log("Groq API Key:", GROQ_API_KEY ? "OK" : "MISSING");
+console.log("WhatsApp Token:", WHATSAPP_TOKEN ? "OK" : "MISSING");
+console.log("Phone Number ID:", PHONE_NUMBER_ID ? "OK" : "MISSING");
+console.log("================================");
 
+// ===============================
+// HEALTH CHECK
+// ===============================
 app.get("/", (req, res) => {
-  res.status(200).send("WhatsApp AI Bot is running.");
+  res.send("WhatsApp AI Bot is running");
 });
 
-
-// ==================================================
-// HEALTH CHECK
-// ==================================================
-
 app.get("/api", (req, res) => {
-  res.status(200).json({
+  res.json({
     status: "ok",
-    bot: "WhatsApp AI Bot"
+    service: "WhatsApp AI Bot",
+    ai: "Groq",
+    model: GROQ_MODEL
   });
 });
 
-
-// ==================================================
-// PRIVACY POLICY
-// ==================================================
-
-app.get("/privacy", (req, res) => {
-  res.type("text/plain").send(`
-Privacy Policy
-
-This WhatsApp AI Bot receives messages sent by users through WhatsApp.
-
-Messages may be processed by Google Gemini to generate AI responses.
-
-Conversation history is temporarily stored in server memory for maintaining conversation context.
-
-We do not sell personal information.
-
-Users may contact the bot owner to request deletion of their information.
-`);
-});
-
-
-// ==================================================
+// ===============================
 // META WEBHOOK VERIFICATION
-// ==================================================
-
+// ===============================
 app.get("/webhook", (req, res) => {
-
-  console.log("================================");
-  console.log("META WEBHOOK VERIFICATION");
-  console.log("================================");
-
   const mode = req.query["hub.mode"];
   const token = req.query["hub.verify_token"];
   const challenge = req.query["hub.challenge"];
 
-  console.log("Mode:", mode);
-  console.log("Token received:", token ? "YES" : "NO");
-  console.log("Challenge received:", challenge ? "YES" : "NO");
-
+  console.log("Webhook verification request");
 
   if (mode === "subscribe" && token === VERIFY_TOKEN) {
-
-    console.log("Webhook verification successful.");
-
+    console.log("Webhook verified successfully");
     return res.status(200).send(challenge);
   }
 
-
-  console.log("Webhook verification failed.");
+  console.log("Webhook verification failed");
 
   return res.sendStatus(403);
 });
 
-
-// ==================================================
-// WHATSAPP INCOMING MESSAGE
-// ==================================================
-
-app.post("/webhook", async (req, res) => {
-
-  console.log("================================");
-  console.log("WHATSAPP WEBHOOK RECEIVED");
-  console.log("================================");
-
-  console.log(JSON.stringify(req.body, null, 2));
-
-
-  // ------------------------------------------------
-  // Respond to Meta immediately
-  // ------------------------------------------------
-
-  res.sendStatus(200);
-
-
-  try {
-
-    const value =
-      req.body?.entry?.[0]?.changes?.[0]?.value;
-
-
-    if (!value) {
-      console.log("No webhook value found.");
-      return;
-    }
-
-
-    // ------------------------------------------------
-    // IMPORTANT
-    // This is the WhatsApp Business number ID
-    // that received the message.
-    // ------------------------------------------------
-
-    const incomingPhoneNumberId =
-      value.metadata?.phone_number_id;
-
-
-    console.log(
-      "Incoming WhatsApp Phone Number ID:",
-      incomingPhoneNumberId
-    );
-
-
-    // ------------------------------------------------
-    // Get message
-    // ------------------------------------------------
-
-    const message = value.messages?.[0];
-
-
-    // Ignore status updates
-    if (!message) {
-
-      console.log(
-        "No user message. Probably a status update."
-      );
-
-      return;
-    }
-
-
-    // ------------------------------------------------
-    // USER'S WHATSAPP NUMBER
-    // ------------------------------------------------
-
-    const from = message.from;
-
-
-    console.log(
-      "Message received from:",
-      from
-    );
-
-
-    // ------------------------------------------------
-    // TEXT MESSAGE
-    // ------------------------------------------------
-
-    const text = message.text?.body;
-
-
-    if (!from) {
-
-      console.log("Sender number not found.");
-
-      return;
-    }
-
-
-    // ------------------------------------------------
-    // Non-text message
-    // ------------------------------------------------
-
-    if (!text) {
-
-      await sendWhatsAppMessage(
-        from,
-        "দুঃখিত, আমি এখন শুধু লেখা মেসেজ বুঝতে পারি।",
-        incomingPhoneNumberId
-      );
-
-      return;
-    }
-
-
-    console.log("User message:");
-    console.log(text);
-
-
-    // ------------------------------------------------
-    // GEMINI AI
-    // ------------------------------------------------
-
-    const reply = await callGemini(text);
-
-
-    console.log("AI Reply:");
-    console.log(reply);
-
-
-    // ------------------------------------------------
-    // SEND REPLY
-    //
-    // IMPORTANT:
-    // reply goes to the ORIGINAL USER
-    // from = user who sent the message
-    //
-    // sender/business number is selected by
-    // incomingPhoneNumberId
-    // ------------------------------------------------
-
-    await sendWhatsAppMessage(
-      from,
-      reply,
-      incomingPhoneNumberId
-    );
-
-
-  } catch (error) {
-
-    console.error(
-      "Webhook processing error:",
-      error.response?.data || error.message
-    );
-
+// ===============================
+// GROQ AI
+// ===============================
+async function getAIReply(userMessage) {
+  if (!GROQ_API_KEY) {
+    throw new Error("GROQ_API_KEY is missing");
   }
 
-});
-
-
-// ==================================================
-// GEMINI AI
-// ==================================================
-
-async function callGemini(userMessage) {
-
-  if (!GEMINI_API_KEY) {
-
-    console.error(
-      "GEMINI_API_KEY is missing."
-    );
-
-    return "দুঃখিত, AI service এখন configure করা হয়নি।";
-  }
-
-
-  const systemInstruction = `
-তুমি একজন সহায়ক বাংলা AI assistant।
-
-তুমি মূলত Eastern Railway এবং Sealdah Division-এর ট্রেন সম্পর্কিত প্রশ্নের উত্তর দেবে।
-
-ব্যবহারকারী বাংলায় প্রশ্ন করলে বাংলায় উত্তর দেবে।
-
-উত্তর সংক্ষিপ্ত, সহজ এবং পরিষ্কার হবে।
-
-ট্রেন সম্পর্কিত প্রশ্ন হলে:
-
-- ট্রেনের নাম বা নম্বর
-- কোথা থেকে ছাড়ে
-- কখন ছাড়ে
-- কোথায় যায়
-- পৌঁছানোর সময়
-
-যদি নিশ্চিত তথ্য না থাকে তাহলে অনুমান করে সময় বলবে না।
-
-প্রয়োজনে ব্যবহারকারীকে NTES বা Indian Railways-এর official enquiry system-এ যাচাই করতে বলবে।
-
-সাধারণ প্রশ্ন করলে সাধারণভাবেই সাহায্য করবে।
-
-WhatsApp-এর জন্য Markdown table ব্যবহার করবে না।
-`;
-
-
-  const url =
-    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
-
-
-  const body = {
-
-    system_instruction: {
-
-      parts: [
-        {
-          text: systemInstruction
-        }
-      ]
-
-    },
-
-    contents: [
-
-      {
-        role: "user",
-
-        parts: [
+  const response = await fetch(
+    "https://api.groq.com/openai/v1/chat/completions",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${GROQ_API_KEY}`
+      },
+      body: JSON.stringify({
+        model: GROQ_MODEL,
+        temperature: 0.3,
+        max_tokens: 500,
+        messages: [
           {
-            text: userMessage
+            role: "system",
+            content: `
+তুমি একজন দ্রুত, ভদ্র এবং সহায়ক বাংলা AI assistant।
+
+তোমার প্রধান কাজ:
+- ব্যবহারকারীর প্রশ্ন বুঝে সহজ বাংলায় উত্তর দেওয়া।
+- প্রয়োজনে বাংলা ও English দুটোই ব্যবহার করা।
+- উত্তর সংক্ষিপ্ত, পরিষ্কার এবং সরাসরি রাখা।
+- ব্যবহারকারী যদি ট্রেন বা Eastern Railway / Sealdah Division সম্পর্কে প্রশ্ন করে, তাহলে সাহায্য করার চেষ্টা করবে।
+- তোমার কাছে লাইভ ট্রেন ডেটা না থাকলে কখনো বানিয়ে ট্রেনের সময়, নম্বর বা availability বলবে না।
+- নিশ্চিত তথ্য না থাকলে স্পষ্টভাবে বলবে যে লাইভ তথ্য যাচাই করা দরকার।
+- অপ্রয়োজনীয় দীর্ঘ উত্তর দেবে না।
+`
+          },
+          {
+            role: "user",
+            content: userMessage
           }
         ]
+      })
+    }
+  );
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    console.error("Groq API Error:", data);
+    throw new Error(
+      data?.error?.message || "Groq API request failed"
+    );
+  }
+
+  const reply =
+    data?.choices?.[0]?.message?.content?.trim();
+
+  if (!reply) {
+    throw new Error("Empty response from Groq");
+  }
+
+  return reply;
+}
+
+// ===============================
+// SEND WHATSAPP MESSAGE
+// ===============================
+async function sendWhatsAppMessage(to, message) {
+  const url =
+    `https://graph.facebook.com/v23.0/${PHONE_NUMBER_ID}/messages`;
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${WHATSAPP_TOKEN}`
+    },
+    body: JSON.stringify({
+      messaging_product: "whatsapp",
+      recipient_type: "individual",
+      to: to,
+      type: "text",
+      text: {
+        preview_url: false,
+        body: message
       }
+    })
+  });
 
-    ]
+  const data = await response.json();
 
-  };
+  if (!response.ok) {
+    console.error("WhatsApp API Error:", data);
+    throw new Error(
+      data?.error?.message || "WhatsApp message failed"
+    );
+  }
 
+  console.log("WhatsApp message sent:", data);
+  return data;
+}
 
+// ===============================
+// WEBHOOK RECEIVE
+// ===============================
+app.post("/webhook", async (req, res) => {
   try {
+    // Respond to Meta immediately
+    res.sendStatus(200);
 
-    const response = await axios.post(
-      url,
-      body,
-      {
-        headers: {
-          "Content-Type": "application/json"
-        },
+    const body = req.body;
 
-        timeout: 30000
-      }
+    console.log(
+      "Incoming webhook:",
+      JSON.stringify(body)
     );
 
-
-    const parts =
-      response.data?.candidates?.[0]?.content?.parts || [];
-
-
-    const reply = parts
-      .map(part => part.text || "")
-      .join("")
-      .trim();
-
-
-    if (!reply) {
-
-      return "দুঃখিত, এই মুহূর্তে উত্তর দিতে পারছি না।";
+    if (body.object !== "whatsapp_business_account") {
+      return;
     }
 
+    const entries = body.entry || [];
 
-    return reply.substring(0, 4000);
+    for (const entry of entries) {
+      const changes = entry.changes || [];
 
+      for (const change of changes) {
+        const value = change.value;
 
-  } catch (error) {
-
-    console.error(
-      "Gemini error:",
-      error.response?.data || error.message
-    );
-
-
-    return "দুঃখিত, AI service থেকে এখন উত্তর পাওয়া যাচ্ছে না। একটু পরে আবার চেষ্টা করুন।";
-  }
-
-}
-
-
-// ==================================================
-// SEND WHATSAPP MESSAGE
-// ==================================================
-
-async function sendWhatsAppMessage(
-  to,
-  text,
-  phoneNumberId
-) {
-
-
-  // ------------------------------------------------
-  // If webhook metadata has phone number ID,
-  // use that.
-  //
-  // Otherwise use Render Environment Variable.
-  // ------------------------------------------------
-
-  const senderPhoneNumberId =
-    phoneNumberId || PHONE_NUMBER_ID;
-
-
-  if (!WHATSAPP_TOKEN) {
-
-    console.error(
-      "WHATSAPP_TOKEN is missing."
-    );
-
-    return;
-  }
-
-
-  if (!senderPhoneNumberId) {
-
-    console.error(
-      "PHONE_NUMBER_ID is missing."
-    );
-
-    return;
-  }
-
-
-  console.log(
-    "Sending WhatsApp reply..."
-  );
-
-  console.log(
-    "From Phone Number ID:",
-    senderPhoneNumberId
-  );
-
-  console.log(
-    "To:",
-    to
-  );
-
-
-  // ------------------------------------------------
-  // WhatsApp Cloud API URL
-  // ------------------------------------------------
-
-  const url =
-    `https://graph.facebook.com/v20.0/${senderPhoneNumberId}/messages`;
-
-
-  try {
-
-    const response = await axios.post(
-
-      url,
-
-      {
-
-        messaging_product: "whatsapp",
-
-        recipient_type: "individual",
-
-        to: to,
-
-        type: "text",
-
-        text: {
-
-          preview_url: false,
-
-          body: text
-
+        if (!value) {
+          continue;
         }
 
-      },
+        const messages = value.messages || [];
 
-      {
+        for (const message of messages) {
 
-        headers: {
+          // Only process text messages
+          if (message.type !== "text") {
+            continue;
+          }
 
-          Authorization:
-            `Bearer ${WHATSAPP_TOKEN}`,
+          const from = message.from;
+          const userMessage =
+            message.text?.body?.trim();
 
-          "Content-Type":
-            "application/json"
+          if (!from || !userMessage) {
+            continue;
+          }
 
-        },
+          console.log(
+            `Message from ${from}: ${userMessage}`
+          );
 
-        timeout: 30000
+          try {
+            // Get AI response
+            const reply =
+              await getAIReply(userMessage);
 
+            console.log(
+              `AI Reply: ${reply}`
+            );
+
+            // Send WhatsApp reply
+            await sendWhatsAppMessage(
+              from,
+              reply
+            );
+
+          } catch (error) {
+            console.error(
+              "Message processing error:",
+              error
+            );
+
+            // Send friendly fallback
+            try {
+              await sendWhatsAppMessage(
+                from,
+                "দুঃখিত, এই মুহূর্তে AI service থেকে উত্তর পাওয়া যাচ্ছে না। একটু পরে আবার চেষ্টা করুন।"
+              );
+            } catch (sendError) {
+              console.error(
+                "Fallback message failed:",
+                sendError
+              );
+            }
+          }
+        }
       }
-
-    );
-
-
-    console.log(
-      "WhatsApp message sent successfully."
-    );
-
-    console.log(
-      "Recipient:",
-      to
-    );
-
-    console.log(
-      "Message ID:",
-      response.data?.messages?.[0]?.id
-    );
-
+    }
 
   } catch (error) {
-
     console.error(
-      "WhatsApp API error:"
+      "Webhook error:",
+      error
     );
 
-    console.error(
-      error.response?.data ||
-      error.message
-    );
-
+    // Meta already received 200
   }
+});
 
-}
+// ===============================
+// PRIVACY POLICY
+// ===============================
+app.get("/privacy", (req, res) => {
+  res.send(`
+    <html>
+      <head>
+        <title>Privacy Policy</title>
+      </head>
+      <body>
+        <h1>Privacy Policy</h1>
 
+        <p>
+          This WhatsApp AI Bot processes messages
+          submitted by users to provide automated
+          responses.
+        </p>
 
-// ==================================================
+        <p>
+          Messages are processed only for providing
+          the requested service.
+        </p>
+
+        <p>
+          This service does not intentionally sell
+          personal information to third parties.
+        </p>
+
+        <p>
+          Contact: music@sumanmusix.info
+        </p>
+      </body>
+    </html>
+  `);
+});
+
+// ===============================
 // START SERVER
-// ==================================================
-
-app.listen(
-  PORT,
-  "0.0.0.0",
-  () => {
-
-    console.log(
-      "================================"
-    );
-
-    console.log(
-      "WhatsApp AI Bot is running."
-    );
-
-    console.log(
-      `Server running on port ${PORT}`
-    );
-
-    console.log(
-      "Health: /api"
-    );
-
-    console.log(
-      "Webhook: /webhook"
-    );
-
-    console.log(
-      "Privacy: /privacy"
-    );
-
-    console.log(
-      "================================"
-    );
-
-  }
-);
+// ===============================
+app.listen(PORT, () => {
+  console.log("================================");
+  console.log("WhatsApp AI Bot is running.");
+  console.log(`Server running on port ${PORT}`);
+  console.log("Health: /api");
+  console.log("Webhook: /webhook");
+  console.log("Privacy: /privacy");
+  console.log("AI: Groq");
+  console.log(`Model: ${GROQ_MODEL}`);
+  console.log("================================");
+});
