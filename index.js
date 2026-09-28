@@ -14,26 +14,34 @@ const {
   WHATSAPP_TOKEN,
   PHONE_NUMBER_ID,
   GEMINI_API_KEY,
-  GEMINI_MODEL = "gemini-3.8-flash"
+  GEMINI_MODEL = "gemini-2.5-flash"
 } = process.env;
 
-// --------------------------------------------------
-// Basic health check
-// --------------------------------------------------
+
+// ==================================================
+// HOME
+// ==================================================
 
 app.get("/", (req, res) => {
   res.status(200).send("WhatsApp AI Bot is running.");
 });
 
+
+// ==================================================
+// HEALTH CHECK
+// ==================================================
+
 app.get("/api", (req, res) => {
   res.status(200).json({
-    status: "ok"
+    status: "ok",
+    bot: "WhatsApp AI Bot"
   });
 });
 
-// --------------------------------------------------
-// Privacy Policy
-// --------------------------------------------------
+
+// ==================================================
+// PRIVACY POLICY
+// ==================================================
 
 app.get("/privacy", (req, res) => {
   res.type("text/plain").send(`
@@ -43,92 +51,190 @@ This WhatsApp AI Bot receives messages sent by users through WhatsApp.
 
 Messages may be processed by Google Gemini to generate AI responses.
 
-Conversation history is temporarily stored in server memory for the purpose of maintaining conversation context.
+Conversation history is temporarily stored in server memory for maintaining conversation context.
 
 We do not sell personal information.
 
 Users may contact the bot owner to request deletion of their information.
-  `);
+`);
 });
 
-// --------------------------------------------------
-// Meta WhatsApp Webhook Verification
-// --------------------------------------------------
+
+// ==================================================
+// META WEBHOOK VERIFICATION
+// ==================================================
 
 app.get("/webhook", (req, res) => {
+
   console.log("================================");
   console.log("META WEBHOOK VERIFICATION");
+  console.log("================================");
 
   const mode = req.query["hub.mode"];
   const token = req.query["hub.verify_token"];
   const challenge = req.query["hub.challenge"];
 
+  console.log("Mode:", mode);
+  console.log("Token received:", token ? "YES" : "NO");
+  console.log("Challenge received:", challenge ? "YES" : "NO");
+
+
   if (mode === "subscribe" && token === VERIFY_TOKEN) {
+
     console.log("Webhook verification successful.");
+
     return res.status(200).send(challenge);
   }
 
+
   console.log("Webhook verification failed.");
+
   return res.sendStatus(403);
 });
 
-// --------------------------------------------------
-// WhatsApp Incoming Messages
-// --------------------------------------------------
+
+// ==================================================
+// WHATSAPP INCOMING MESSAGE
+// ==================================================
 
 app.post("/webhook", async (req, res) => {
 
   console.log("================================");
   console.log("WHATSAPP WEBHOOK RECEIVED");
-  console.log(JSON.stringify(req.body, null, 2));
   console.log("================================");
 
-  // Tell Meta immediately that webhook was received
+  console.log(JSON.stringify(req.body, null, 2));
+
+
+  // ------------------------------------------------
+  // Respond to Meta immediately
+  // ------------------------------------------------
+
   res.sendStatus(200);
+
 
   try {
 
-    const value = req.body?.entry?.[0]?.changes?.[0]?.value;
+    const value =
+      req.body?.entry?.[0]?.changes?.[0]?.value;
+
 
     if (!value) {
+      console.log("No webhook value found.");
       return;
     }
+
+
+    // ------------------------------------------------
+    // IMPORTANT
+    // This is the WhatsApp Business number ID
+    // that received the message.
+    // ------------------------------------------------
+
+    const incomingPhoneNumberId =
+      value.metadata?.phone_number_id;
+
+
+    console.log(
+      "Incoming WhatsApp Phone Number ID:",
+      incomingPhoneNumberId
+    );
+
+
+    // ------------------------------------------------
+    // Get message
+    // ------------------------------------------------
 
     const message = value.messages?.[0];
 
+
     // Ignore status updates
     if (!message) {
-      console.log("No user message. Probably a status update.");
-      return;
-    }
 
-    const from = message.from;
-    const text = message.text?.body;
-
-    if (!from) {
-      return;
-    }
-
-    if (!text) {
-
-      await sendWhatsAppMessage(
-        from,
-        "দুঃখিত, আমি এখন শুধু লেখা মেসেজ বুঝতে পারি।"
+      console.log(
+        "No user message. Probably a status update."
       );
 
       return;
     }
 
-    console.log("User:", from);
-    console.log("Message:", text);
 
-    // Get AI response
+    // ------------------------------------------------
+    // USER'S WHATSAPP NUMBER
+    // ------------------------------------------------
+
+    const from = message.from;
+
+
+    console.log(
+      "Message received from:",
+      from
+    );
+
+
+    // ------------------------------------------------
+    // TEXT MESSAGE
+    // ------------------------------------------------
+
+    const text = message.text?.body;
+
+
+    if (!from) {
+
+      console.log("Sender number not found.");
+
+      return;
+    }
+
+
+    // ------------------------------------------------
+    // Non-text message
+    // ------------------------------------------------
+
+    if (!text) {
+
+      await sendWhatsAppMessage(
+        from,
+        "দুঃখিত, আমি এখন শুধু লেখা মেসেজ বুঝতে পারি।",
+        incomingPhoneNumberId
+      );
+
+      return;
+    }
+
+
+    console.log("User message:");
+    console.log(text);
+
+
+    // ------------------------------------------------
+    // GEMINI AI
+    // ------------------------------------------------
+
     const reply = await callGemini(text);
 
-    console.log("AI Reply:", reply);
 
-    // Send WhatsApp reply
-    await sendWhatsAppMessage(from, reply);
+    console.log("AI Reply:");
+    console.log(reply);
+
+
+    // ------------------------------------------------
+    // SEND REPLY
+    //
+    // IMPORTANT:
+    // reply goes to the ORIGINAL USER
+    // from = user who sent the message
+    //
+    // sender/business number is selected by
+    // incomingPhoneNumberId
+    // ------------------------------------------------
+
+    await sendWhatsAppMessage(
+      from,
+      reply,
+      incomingPhoneNumberId
+    );
+
 
   } catch (error) {
 
@@ -141,18 +247,22 @@ app.post("/webhook", async (req, res) => {
 
 });
 
-// --------------------------------------------------
-// Gemini AI
-// --------------------------------------------------
+
+// ==================================================
+// GEMINI AI
+// ==================================================
 
 async function callGemini(userMessage) {
 
   if (!GEMINI_API_KEY) {
 
-    console.error("GEMINI_API_KEY is missing.");
+    console.error(
+      "GEMINI_API_KEY is missing."
+    );
 
     return "দুঃখিত, AI service এখন configure করা হয়নি।";
   }
+
 
   const systemInstruction = `
 তুমি একজন সহায়ক বাংলা AI assistant।
@@ -180,31 +290,39 @@ async function callGemini(userMessage) {
 WhatsApp-এর জন্য Markdown table ব্যবহার করবে না।
 `;
 
+
   const url =
     `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
+
 
   const body = {
 
     system_instruction: {
+
       parts: [
         {
           text: systemInstruction
         }
       ]
+
     },
 
     contents: [
+
       {
         role: "user",
+
         parts: [
           {
             text: userMessage
           }
         ]
       }
+
     ]
 
   };
+
 
   try {
 
@@ -215,25 +333,30 @@ WhatsApp-এর জন্য Markdown table ব্যবহার করবে �
         headers: {
           "Content-Type": "application/json"
         },
+
         timeout: 30000
       }
     );
 
+
     const parts =
       response.data?.candidates?.[0]?.content?.parts || [];
+
 
     const reply = parts
       .map(part => part.text || "")
       .join("")
       .trim();
 
+
     if (!reply) {
 
       return "দুঃখিত, এই মুহূর্তে উত্তর দিতে পারছি না।";
-
     }
 
+
     return reply.substring(0, 4000);
+
 
   } catch (error) {
 
@@ -242,91 +365,190 @@ WhatsApp-এর জন্য Markdown table ব্যবহার করবে �
       error.response?.data || error.message
     );
 
+
     return "দুঃখিত, AI service থেকে এখন উত্তর পাওয়া যাচ্ছে না। একটু পরে আবার চেষ্টা করুন।";
   }
+
 }
 
-// --------------------------------------------------
-// Send WhatsApp Message
-// --------------------------------------------------
 
-async function sendWhatsAppMessage(to, text) {
+// ==================================================
+// SEND WHATSAPP MESSAGE
+// ==================================================
+
+async function sendWhatsAppMessage(
+  to,
+  text,
+  phoneNumberId
+) {
+
+
+  // ------------------------------------------------
+  // If webhook metadata has phone number ID,
+  // use that.
+  //
+  // Otherwise use Render Environment Variable.
+  // ------------------------------------------------
+
+  const senderPhoneNumberId =
+    phoneNumberId || PHONE_NUMBER_ID;
+
 
   if (!WHATSAPP_TOKEN) {
 
-    console.error("WHATSAPP_TOKEN is missing.");
+    console.error(
+      "WHATSAPP_TOKEN is missing."
+    );
 
     return;
   }
 
-  if (!PHONE_NUMBER_ID) {
 
-    console.error("PHONE_NUMBER_ID is missing.");
+  if (!senderPhoneNumberId) {
+
+    console.error(
+      "PHONE_NUMBER_ID is missing."
+    );
 
     return;
   }
+
+
+  console.log(
+    "Sending WhatsApp reply..."
+  );
+
+  console.log(
+    "From Phone Number ID:",
+    senderPhoneNumberId
+  );
+
+  console.log(
+    "To:",
+    to
+  );
+
+
+  // ------------------------------------------------
+  // WhatsApp Cloud API URL
+  // ------------------------------------------------
 
   const url =
-    `https://graph.facebook.com/v20.0/${PHONE_NUMBER_ID}/messages`;
+    `https://graph.facebook.com/v20.0/${senderPhoneNumberId}/messages`;
+
 
   try {
 
-    await axios.post(
+    const response = await axios.post(
+
       url,
 
       {
+
         messaging_product: "whatsapp",
+
         recipient_type: "individual",
+
         to: to,
+
         type: "text",
 
         text: {
+
           preview_url: false,
+
           body: text
+
         }
+
       },
 
       {
+
         headers: {
-          Authorization: `Bearer ${WHATSAPP_TOKEN}`,
-          "Content-Type": "application/json"
+
+          Authorization:
+            `Bearer ${WHATSAPP_TOKEN}`,
+
+          "Content-Type":
+            "application/json"
+
         },
 
         timeout: 30000
+
       }
+
+    );
+
+
+    console.log(
+      "WhatsApp message sent successfully."
     );
 
     console.log(
-      "WhatsApp message sent to:",
+      "Recipient:",
       to
     );
+
+    console.log(
+      "Message ID:",
+      response.data?.messages?.[0]?.id
+    );
+
 
   } catch (error) {
 
     console.error(
-      "WhatsApp API error:",
-      error.response?.data || error.message
+      "WhatsApp API error:"
+    );
+
+    console.error(
+      error.response?.data ||
+      error.message
     );
 
   }
+
 }
 
-// --------------------------------------------------
-// Start Server
-// --------------------------------------------------
+
+// ==================================================
+// START SERVER
+// ==================================================
 
 app.listen(
   PORT,
   "0.0.0.0",
   () => {
 
-    console.log("================================");
-    console.log("WhatsApp AI Bot is running.");
-    console.log(`Server running on port ${PORT}`);
-    console.log("Health: /api");
-    console.log("Webhook: /webhook");
-    console.log("Privacy: /privacy");
-    console.log("================================");
+    console.log(
+      "================================"
+    );
+
+    console.log(
+      "WhatsApp AI Bot is running."
+    );
+
+    console.log(
+      `Server running on port ${PORT}`
+    );
+
+    console.log(
+      "Health: /api"
+    );
+
+    console.log(
+      "Webhook: /webhook"
+    );
+
+    console.log(
+      "Privacy: /privacy"
+    );
+
+    console.log(
+      "================================"
+    );
 
   }
 );
