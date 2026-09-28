@@ -1,7 +1,7 @@
 {
   "name": "whatsapp-ai-bot",
   "version": "1.0.0",
-  "description": "WhatsApp AI Bot for Sealdah Train Service",
+  "description": "WhatsApp AI Train Service Bot",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
@@ -10,8 +10,8 @@
     "node": ">=20"
   },
   "dependencies": {
-    "axios": "^1.8.4",
     "dotenv": "^16.4.7",
-    "express": "^4.21.2"
+    "express": "^4.21.2",
+    "groq-sdk": "^0.15.0"
   }
 }
