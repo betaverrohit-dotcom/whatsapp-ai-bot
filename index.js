@@ -18,9 +18,10 @@ const {
   GEMINI_MODEL = "gemini-3.8-flash"
 } = process.env;
 
-// --------------------------------------------------
-// Basic health check
-// --------------------------------------------------
+
+// ==================================================
+// HEALTH CHECK
+// ==================================================
 
 app.get("/", (req, res) => {
   res.status(200).send("WhatsApp AI Bot is running.");
@@ -29,53 +30,48 @@ app.get("/", (req, res) => {
 app.get("/api", (req, res) => {
   res.status(200).json({
     status: "ok",
-    whatsapp: "connected",
-    ai: "ready"
+    bot: "WhatsApp AI Bot"
   });
 });
 
-// --------------------------------------------------
-// Privacy Policy
-// --------------------------------------------------
+
+// ==================================================
+// PRIVACY POLICY
+// ==================================================
 
 app.get("/privacy", (req, res) => {
-  res.type("text/plain").send(
-`Privacy Policy
+  res.type("text/plain").send(`
+Privacy Policy
 
 This WhatsApp AI Bot receives messages sent by users through WhatsApp.
 
 Messages may be processed by Google Gemini to generate AI responses.
 
-Conversation history is temporarily stored in server memory for the purpose of maintaining conversation context.
+Conversation history may be temporarily stored in server memory for maintaining conversation context.
 
 We do not sell personal information.
 
-Users may contact the bot owner to request deletion of their information.`
-  );
+Users may contact the bot owner to request deletion of their information.
+`);
 });
 
-// --------------------------------------------------
-// Meta WhatsApp Webhook Verification
-// --------------------------------------------------
+
+// ==================================================
+// META WEBHOOK VERIFICATION
+// ==================================================
 
 app.get("/webhook", (req, res) => {
-
-  console.log("================================");
-  console.log("META WEBHOOK VERIFICATION");
-  console.log("Mode:", req.query["hub.mode"]);
-  console.log(
-    "Token received:",
-    req.query["hub.verify_token"] ? "YES" : "NO"
-  );
-  console.log(
-    "Challenge:",
-    req.query["hub.challenge"] ? "YES" : "NO"
-  );
-  console.log("================================");
 
   const mode = req.query["hub.mode"];
   const token = req.query["hub.verify_token"];
   const challenge = req.query["hub.challenge"];
+
+  console.log("================================");
+  console.log("META WEBHOOK VERIFICATION");
+  console.log("Mode:", mode);
+  console.log("Token received:", token ? "YES" : "NO");
+  console.log("Challenge:", challenge ? "YES" : "NO");
+  console.log("================================");
 
   if (mode === "subscribe" && token === VERIFY_TOKEN) {
 
@@ -89,9 +85,10 @@ app.get("/webhook", (req, res) => {
   return res.sendStatus(403);
 });
 
-// --------------------------------------------------
-// WhatsApp Incoming Messages
-// --------------------------------------------------
+
+// ==================================================
+// WHATSAPP WEBHOOK
+// ==================================================
 
 app.post("/webhook", async (req, res) => {
 
@@ -100,7 +97,7 @@ app.post("/webhook", async (req, res) => {
   console.log(JSON.stringify(req.body, null, 2));
   console.log("================================");
 
-  // Respond to Meta immediately
+  // Immediately tell Meta that webhook was received
   res.sendStatus(200);
 
   try {
@@ -109,56 +106,63 @@ app.post("/webhook", async (req, res) => {
       req.body?.entry?.[0]?.changes?.[0]?.value;
 
     if (!value) {
-      console.log("Webhook value missing.");
+      console.log("No webhook value.");
       return;
     }
 
+    // Ignore delivery/read/status events
     const message = value.messages?.[0];
 
-    // Ignore status updates
     if (!message) {
-
-      console.log(
-        "No user message. Probably a status update."
-      );
-
+      console.log("No user message. Status/update event.");
       return;
     }
 
     const from = message.from;
-    const text = message.text?.body;
 
     if (!from) {
       console.log("Sender number missing.");
       return;
     }
 
-    if (!text) {
+    // ------------------------------------------------
+    // TEXT MESSAGE
+    // ------------------------------------------------
+
+    if (message.type !== "text") {
 
       await sendWhatsAppMessage(
         from,
-        "দুঃখিত, আমি এখন শুধু লেখা মেসেজ বুঝতে পারি।"
+        "দুঃখিত, আমি বর্তমানে শুধু Text Message বুঝতে পারি।"
       );
 
       return;
     }
 
+    const userMessage = message.text?.body?.trim();
+
+    if (!userMessage) {
+      return;
+    }
+
     console.log("User:", from);
-    console.log("Message:", text);
+    console.log("Message:", userMessage);
+
 
     // ------------------------------------------------
-    // Call Gemini
+    // GEMINI
     // ------------------------------------------------
 
-    const reply = await callGemini(text);
+    const aiReply = await callGemini(userMessage);
 
-    console.log("AI Reply:", reply);
+    console.log("AI Reply:", aiReply);
+
 
     // ------------------------------------------------
-    // Send WhatsApp reply
+    // WHATSAPP REPLY
     // ------------------------------------------------
 
-    await sendWhatsAppMessage(from, reply);
+    await sendWhatsAppMessage(from, aiReply);
 
   } catch (error) {
 
@@ -170,9 +174,10 @@ app.post("/webhook", async (req, res) => {
   }
 });
 
-// --------------------------------------------------
-// Gemini AI
-// --------------------------------------------------
+
+// ==================================================
+// GEMINI AI
+// ==================================================
 
 async function callGemini(userMessage) {
 
@@ -183,35 +188,27 @@ async function callGemini(userMessage) {
     return "দুঃখিত, AI service এখন configure করা হয়নি।";
   }
 
-  const systemInstruction =
-`তুমি একজন সহায়ক বাংলা AI assistant।
 
-তুমি মূলত Eastern Railway এবং Sealdah Division-এর ট্রেন সম্পর্কিত প্রশ্নের উত্তর দেবে।
+  const systemInstruction = `
+তুমি একজন সহায়ক বাংলা AI assistant।
+
+তুমি সাধারণ ব্যবহারকারীর প্রশ্নের উত্তর দেবে।
+
+তুমি Eastern Railway এবং Sealdah Division সম্পর্কিত প্রশ্নেও সাহায্য করতে পারবে।
 
 ব্যবহারকারী বাংলায় প্রশ্ন করলে বাংলায় উত্তর দেবে।
 
-উত্তর সংক্ষিপ্ত, সহজ এবং পরিষ্কার হবে।
+ব্যবহারকারী ইংরেজিতে প্রশ্ন করলে ইংরেজিতে উত্তর দিতে পারো।
 
-ট্রেন সম্পর্কিত প্রশ্ন হলে:
-- ট্রেনের নাম বা নম্বর
-- কোথা থেকে ছাড়ে
-- কখন ছাড়ে
-- কোথায় যায়
-- পৌঁছানোর সময়
+উত্তর সহজ, স্বাভাবিক এবং সংক্ষিপ্ত রাখবে।
 
-যদি নিশ্চিত তথ্য না থাকে তাহলে অনুমান করে সময় বলবে না।
+ট্রেনের সময়সূচি বা railway information সম্পর্কে নিশ্চিত তথ্য না থাকলে অনুমান করবে না।
 
 প্রয়োজনে ব্যবহারকারীকে NTES বা Indian Railways-এর official enquiry system-এ যাচাই করতে বলবে।
 
-সাধারণ প্রশ্ন করলে সাধারণভাবেই সাহায্য করবে।
-
 WhatsApp-এর জন্য Markdown table ব্যবহার করবে না।
+`;
 
-কোনো তথ্য নিশ্চিত না হলে স্পষ্টভাবে বলবে যে তথ্যটি নিশ্চিত নয়।`;
-
-  // ------------------------------------------------
-  // Models to try
-  // ------------------------------------------------
 
   const models = [
     GEMINI_MODEL,
@@ -219,23 +216,26 @@ WhatsApp-এর জন্য Markdown table ব্যবহার করবে �
     "gemini-3.8-flash-lite"
   ];
 
-  // Remove duplicates
+
   const uniqueModels = [...new Set(models)];
 
   let lastError = null;
 
-  // ------------------------------------------------
-  // Try models
-  // ------------------------------------------------
+
+  // ==================================================
+  // TRY GEMINI MODELS
+  // ==================================================
 
   for (const model of uniqueModels) {
 
     console.log("Trying Gemini model:", model);
 
-    const url =
-`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
 
-    const body = {
+    const url =
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
+
+
+    const requestBody = {
 
       system_instruction: {
         parts: [
@@ -257,21 +257,23 @@ WhatsApp-এর জন্য Markdown table ব্যবহার করবে �
       ]
     };
 
-    // ------------------------------------------------
-    // Retry up to 3 times
-    // ------------------------------------------------
+
+    // ==================================================
+    // RETRY
+    // ==================================================
 
     for (let attempt = 1; attempt <= 3; attempt++) {
 
       try {
 
         console.log(
-          `Gemini attempt ${attempt}/3 using ${model}`
+          `Gemini attempt ${attempt}/3`
         );
+
 
         const response = await axios.post(
           url,
-          body,
+          requestBody,
           {
             headers: {
               "Content-Type": "application/json"
@@ -281,44 +283,46 @@ WhatsApp-এর জন্য Markdown table ব্যবহার করবে �
           }
         );
 
+
         const parts =
           response.data?.candidates?.[0]?.content?.parts || [];
+
 
         const reply = parts
           .map(part => part.text || "")
           .join("")
           .trim();
 
+
         if (reply) {
 
           console.log(
-            `Gemini success using ${model}`
+            "Gemini response successful."
           );
 
           return reply.substring(0, 4000);
         }
 
-        console.log(
-          "Gemini returned empty response."
-        );
+
+        console.log("Gemini returned empty response.");
 
       } catch (error) {
 
         lastError =
           error.response?.data || error.message;
 
+
         const status =
           error.response?.status;
 
+
         console.error(
-          `Gemini error on attempt ${attempt}:`,
+          "Gemini error:",
           lastError
         );
 
-        // --------------------------------------------
-        // Model unavailable / not found
-        // --------------------------------------------
 
+        // Model not available
         if (
           status === 404 ||
           error.response?.data?.error?.status === "NOT_FOUND"
@@ -331,10 +335,8 @@ WhatsApp-এর জন্য Markdown table ব্যবহার করবে �
           break;
         }
 
-        // --------------------------------------------
-        // Rate limit / server busy / temporary error
-        // --------------------------------------------
 
+        // Temporary errors
         if (
           status === 429 ||
           status === 500 ||
@@ -348,12 +350,10 @@ WhatsApp-এর জন্য Markdown table ব্যবহার করবে �
             const waitTime =
               attempt === 1
                 ? 3000
-                : attempt === 2
-                  ? 7000
-                  : 12000;
+                : 7000;
 
             console.log(
-              `Waiting ${waitTime}ms before retry...`
+              `Retrying after ${waitTime}ms...`
             );
 
             await sleep(waitTime);
@@ -362,23 +362,26 @@ WhatsApp-এর জন্য Markdown table ব্যবহার করবে �
           }
         }
 
-        // Other errors
+
         break;
       }
     }
   }
+
 
   console.error(
     "All Gemini attempts failed:",
     lastError
   );
 
-  return "দুঃখিত, AI service এই মুহূর্তে ব্যস্ত আছে। ১০-১৫ সেকেন্ড পরে আবার চেষ্টা করুন।";
+
+  return "দুঃখিত, AI service এই মুহূর্তে ব্যস্ত আছে। একটু পরে আবার চেষ্টা করুন।";
 }
 
-// --------------------------------------------------
-// Sleep helper
-// --------------------------------------------------
+
+// ==================================================
+// SLEEP
+// ==================================================
 
 function sleep(ms) {
 
@@ -387,9 +390,10 @@ function sleep(ms) {
   });
 }
 
-// --------------------------------------------------
-// Send WhatsApp Message
-// --------------------------------------------------
+
+// ==================================================
+// SEND WHATSAPP MESSAGE
+// ==================================================
 
 async function sendWhatsAppMessage(to, text) {
 
@@ -402,6 +406,7 @@ async function sendWhatsAppMessage(to, text) {
     return;
   }
 
+
   if (!PHONE_NUMBER_ID) {
 
     console.error(
@@ -411,17 +416,20 @@ async function sendWhatsAppMessage(to, text) {
     return;
   }
 
+
   if (!to) {
 
     console.error(
-      "WhatsApp recipient number is missing."
+      "Recipient number is missing."
     );
 
     return;
   }
 
+
   const url =
-`https://graph.facebook.com/v20.0/${PHONE_NUMBER_ID}/messages`;
+    `https://graph.facebook.com/v20.0/${PHONE_NUMBER_ID}/messages`;
+
 
   try {
 
@@ -446,16 +454,14 @@ async function sendWhatsAppMessage(to, text) {
 
       {
         headers: {
-          Authorization:
-            `Bearer ${WHATSAPP_TOKEN}`,
-
-          "Content-Type":
-            "application/json"
+          Authorization: `Bearer ${WHATSAPP_TOKEN}`,
+          "Content-Type": "application/json"
         },
 
         timeout: 30000
       }
     );
+
 
     console.log(
       "WhatsApp message sent to:",
@@ -471,9 +477,10 @@ async function sendWhatsAppMessage(to, text) {
   }
 }
 
-// --------------------------------------------------
-// Start Server
-// --------------------------------------------------
+
+// ==================================================
+// START SERVER
+// ==================================================
 
 app.listen(
   PORT,
@@ -481,23 +488,10 @@ app.listen(
   () => {
 
     console.log("================================");
-
-    console.log(
-      "WhatsApp AI Bot is running."
-    );
-
-    console.log(
-      `Server running on port ${PORT}`
-    );
-
-    console.log(
-      "Health: /api"
-    );
-
-    console.log(
-      "Webhook: /webhook"
-    );
-
+    console.log("WhatsApp AI Bot is running.");
+    console.log(`Server running on port ${PORT}`);
+    console.log("Health: /api");
+    console.log("Webhook: /webhook");
     console.log("================================");
   }
 );
