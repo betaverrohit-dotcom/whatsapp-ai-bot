@@ -9,184 +9,138 @@ app.use(express.json());
 
 const PORT = process.env.PORT || 10000;
 
-/* =========================================
-   ENVIRONMENT VARIABLES
-========================================= */
-
 const WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN;
 const PHONE_NUMBER_ID = process.env.PHONE_NUMBER_ID;
 const VERIFY_TOKEN = process.env.VERIFY_TOKEN;
-
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const RAILRADAR_API_KEY = process.env.RAILRADAR_API_KEY;
 
-/* =========================================
-   GEMINI
-========================================= */
+const ai = new GoogleGenAI({
+  apiKey: GEMINI_API_KEY
+});
 
-const ai = GEMINI_API_KEY
-  ? new GoogleGenAI({
-      apiKey: GEMINI_API_KEY
-    })
-  : null;
-
-/* =========================================
+/* =========================================================
    HOME
-========================================= */
+========================================================= */
 
 app.get("/", (req, res) => {
   res.send(`
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Sealdah Train Service AI Bot</title>
+    <html>
+      <head>
+        <title>Sealdah Train Service AI Bot</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      </head>
 
-<style>
-body{
-  margin:0;
-  background:#0b1020;
-  color:#ffffff;
-  font-family:Arial,Helvetica,sans-serif;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  min-height:100vh;
-}
+      <body style="
+        margin:0;
+        background:#0b0f19;
+        color:#ffffff;
+        font-family:Arial,sans-serif;
+        text-align:center;
+      ">
 
-.card{
-  width:90%;
-  max-width:600px;
-  background:#121a2d;
-  border:1px solid #26334f;
-  border-radius:20px;
-  padding:35px;
-  box-sizing:border-box;
-  box-shadow:0 20px 60px rgba(0,0,0,.35);
-}
+        <div style="
+          max-width:900px;
+          margin:80px auto;
+          padding:40px;
+        ">
 
-h1{
-  margin-top:0;
-  font-size:28px;
-}
+          <h1 style="font-size:34px;">
+            🚆 Sealdah Train Service AI Bot
+          </h1>
 
-.status{
-  display:flex;
-  justify-content:space-between;
-  padding:14px 0;
-  border-bottom:1px solid #26334f;
-}
+          <p style="color:#9ca3af;font-size:18px;">
+            WhatsApp: Connected
+          </p>
 
-.ok{
-  color:#00d084;
-  font-weight:bold;
-}
-</style>
-</head>
+          <p style="color:#9ca3af;font-size:18px;">
+            AI: Gemini
+          </p>
 
-<body>
+          <p style="color:#9ca3af;font-size:18px;">
+            Railway Data: AI Assistant
+          </p>
 
-<div class="card">
+          <p style="
+            color:#22c55e;
+            font-size:20px;
+            font-weight:bold;
+          ">
+            ● Status: Online
+          </p>
 
-<h1>🚆 Sealdah Train Service AI Bot</h1>
+        </div>
 
-<div class="status">
-<span>WhatsApp</span>
-<span class="ok">Connected</span>
-</div>
-
-<div class="status">
-<span>AI Assistant</span>
-<span class="ok">Gemini</span>
-</div>
-
-<div class="status">
-<span>Railway Data</span>
-<span class="ok">Live API</span>
-</div>
-
-<div class="status">
-<span>PNR Status</span>
-<span class="ok">Available</span>
-</div>
-
-<div class="status">
-<span>System Status</span>
-<span class="ok">Online</span>
-</div>
-
-</div>
-
-</body>
-</html>
+      </body>
+    </html>
   `);
 });
 
-/* =========================================
+
+/* =========================================================
    HEALTH CHECK
-========================================= */
+========================================================= */
 
 app.get("/api", (req, res) => {
 
   res.json({
     status: "online",
     service: "Sealdah Train Service AI Bot",
-    whatsapp: WHATSAPP_TOKEN ? "configured" : "missing",
-    ai: GEMINI_API_KEY ? "configured" : "missing",
-    railwayData: RAILRADAR_API_KEY ? "configured" : "missing",
-    pnr: "enabled"
+    whatsapp: "connected",
+    ai: "Gemini",
+    railwayData: "RailRadar"
   });
 
 });
 
-/* =========================================
+
+/* =========================================================
    PRIVACY
-========================================= */
+========================================================= */
 
 app.get("/privacy", (req, res) => {
 
   res.send(`
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<title>Privacy Policy</title>
-</head>
+    <html>
 
-<body style="
-font-family:Arial;
-padding:30px;
-max-width:800px;
-margin:auto;
-line-height:1.7;
-">
+      <head>
+        <title>Privacy Policy</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      </head>
 
-<h1>Privacy Policy</h1>
+      <body style="
+        font-family:Arial,sans-serif;
+        padding:30px;
+        line-height:1.6;
+      ">
 
-<p>
-Sealdah Train Service AI Bot processes WhatsApp messages
-only for providing railway information and automated assistance.
-</p>
+        <h1>Privacy Policy</h1>
 
-<p>
-PNR numbers are processed only when a user requests PNR status.
-</p>
+        <p>
+          This WhatsApp AI Bot processes messages only to provide
+          automated railway information and assistance.
+        </p>
 
-<p>
-The service does not intentionally store user messages
-for unrelated purposes.
-</p>
+        <p>
+          Messages are processed for providing the requested service.
+        </p>
 
-</body>
-</html>
+        <p>
+          Railway information may be obtained from third-party
+          railway data services.
+        </p>
+
+      </body>
+
+    </html>
   `);
 
 });
 
-/* =========================================
+
+/* =========================================================
    WHATSAPP WEBHOOK VERIFY
-========================================= */
+========================================================= */
 
 app.get("/webhook", (req, res) => {
 
@@ -204,15 +158,17 @@ app.get("/webhook", (req, res) => {
     return res
       .status(200)
       .send(challenge);
+
   }
 
   return res.sendStatus(403);
 
 });
 
-/* =========================================
+
+/* =========================================================
    SEND WHATSAPP MESSAGE
-========================================= */
+========================================================= */
 
 async function sendWhatsAppMessage(to, text) {
 
@@ -222,23 +178,35 @@ async function sendWhatsAppMessage(to, text) {
       `https://graph.facebook.com/v22.0/${PHONE_NUMBER_ID}/messages`;
 
     const response = await axios.post(
+
       url,
+
       {
         messaging_product: "whatsapp",
+
         recipient_type: "individual",
+
         to: to,
+
         type: "text",
+
         text: {
           preview_url: false,
           body: text
         }
+
       },
+
       {
         headers: {
-          Authorization: `Bearer ${WHATSAPP_TOKEN}`,
-          "Content-Type": "application/json"
+          Authorization:
+            `Bearer ${WHATSAPP_TOKEN}`,
+
+          "Content-Type":
+            "application/json"
         }
       }
+
     );
 
     console.log(
@@ -250,737 +218,721 @@ async function sendWhatsAppMessage(to, text) {
 
     console.error(
       "WhatsApp Send Error:",
-      error.response?.data || error.message
+      error.response?.data ||
+      error.message
     );
 
   }
 
 }
 
-/* =========================================
-   FIND PNR
-========================================= */
 
-function extractPNR(text) {
+/* =========================================================
+   SAFE VALUE HELPER
+   Prevents [object Object]
+========================================================= */
 
-  if (!text) return null;
+function safeText(value, fallback = "") {
 
-  const match = text.match(/\b\d{10}\b/);
-
-  return match ? match[0] : null;
-
-}
-
-/* =========================================
-   SAFE VALUE
-   Prevent [object Object]
-========================================= */
-
-function safeText(value) {
-
-  if (
-    value === null ||
-    value === undefined ||
-    value === ""
-  ) {
-    return "";
-  }
-
-  if (typeof value === "string") {
-    return value;
+  if (value === null || value === undefined) {
+    return fallback;
   }
 
   if (
-    typeof value === "number" ||
-    typeof value === "boolean"
+    typeof value === "string" ||
+    typeof value === "number"
   ) {
     return String(value);
   }
 
-  if (Array.isArray(value)) {
-
-    return value
-      .map(item => safeText(item))
-      .filter(Boolean)
-      .join(", ");
-
-  }
-
   if (typeof value === "object") {
 
-    const preferredKeys = [
-      "status",
-      "code",
-      "coach",
-      "coachNumber",
-      "berth",
-      "berthNumber",
-      "berthType",
-      "type",
-      "number",
-      "name",
-      "position"
-    ];
-
-    const parts = [];
-
-    for (const key of preferredKeys) {
-
-      if (
-        value[key] !== undefined &&
-        value[key] !== null &&
-        value[key] !== ""
-      ) {
-
-        const val = safeText(value[key]);
-
-        if (val) {
-          parts.push(val);
-        }
-
-      }
-
+    if (value.label) {
+      return String(value.label);
     }
 
-    if (parts.length > 0) {
-      return parts.join(" / ");
+    if (value.name) {
+      return String(value.name);
     }
 
-    return Object.values(value)
-      .map(v => safeText(v))
-      .filter(Boolean)
-      .join(" / ");
+    if (value.code) {
+      return String(value.code);
+    }
+
+    if (value.status) {
+      return String(value.status);
+    }
+
+    if (value.value) {
+      return String(value.value);
+    }
+
+    return "";
   }
 
   return String(value);
 
 }
 
-/* =========================================
-   FIND PASSENGERS OBJECT
-========================================= */
 
-function findPassengers(obj) {
-
-  if (!obj || typeof obj !== "object") {
-    return null;
-  }
-
-  if (Array.isArray(obj)) {
-
-    for (const item of obj) {
-
-      const found = findPassengers(item);
-
-      if (found) {
-        return found;
-      }
-
-    }
-
-    return null;
-  }
-
-  const possibleKeys = [
-    "passengers",
-    "passengerStatus",
-    "passengerStatuses",
-    "bookingPassengers"
-  ];
-
-  for (const key of possibleKeys) {
-
-    if (Array.isArray(obj[key])) {
-      return obj[key];
-    }
-
-  }
-
-  for (const value of Object.values(obj)) {
-
-    if (
-      value &&
-      typeof value === "object"
-    ) {
-
-      const found = findPassengers(value);
-
-      if (found) {
-        return found;
-      }
-
-    }
-
-  }
-
-  return null;
-
-}
-
-/* =========================================
-   FIND VALUE RECURSIVELY
-========================================= */
-
-function findValue(obj, keys) {
-
-  if (!obj || typeof obj !== "object") {
-    return null;
-  }
-
-  for (const key of keys) {
-
-    if (
-      obj[key] !== undefined &&
-      obj[key] !== null
-    ) {
-
-      return obj[key];
-
-    }
-
-  }
-
-  for (const value of Object.values(obj)) {
-
-    if (
-      value &&
-      typeof value === "object"
-    ) {
-
-      const found =
-        findValue(value, keys);
-
-      if (
-        found !== null &&
-        found !== undefined
-      ) {
-
-        return found;
-
-      }
-
-    }
-
-  }
-
-  return null;
-
-}
-
-/* =========================================
-   FORMAT PASSENGER STATUS
-========================================= */
-
-function formatPassengerStatus(passenger, index) {
-
-  if (!passenger) {
-    return `${index}. Passenger status unavailable`;
-  }
-
-  const booking =
-    passenger.bookingStatus ??
-    passenger.booking ??
-    passenger.bookedStatus ??
-    passenger.booking_status ??
-    null;
-
-  const current =
-    passenger.currentStatus ??
-    passenger.current ??
-    passenger.current_status ??
-    passenger.status ??
-    null;
-
-  const bookingText =
-    safeText(booking) || "N/A";
-
-  const currentText =
-    safeText(current) || "N/A";
-
-  let coach = findValue(
-    passenger,
-    [
-      "coach",
-      "coachNumber",
-      "coachNo"
-    ]
-  );
-
-  let berth = findValue(
-    passenger,
-    [
-      "berth",
-      "berthNumber",
-      "berthNo",
-      "seat"
-    ]
-  );
-
-  let berthType = findValue(
-    passenger,
-    [
-      "berthType",
-      "seatType",
-      "berth_type"
-    ]
-  );
-
-  let passengerName = findValue(
-    passenger,
-    [
-      "name",
-      "passengerName"
-    ]
-  );
-
-  const lines = [];
-
-  lines.push(
-    `${index}. ${passengerName ? safeText(passengerName) : "Passenger"}`
-  );
-
-  lines.push(
-    `   Booking: ${bookingText}`
-  );
-
-  lines.push(
-    `   Current: ${currentText}`
-  );
-
-  if (coach || berth) {
-
-    let seatInfo = "";
-
-    if (coach) {
-      seatInfo += safeText(coach);
-    }
-
-    if (berth) {
-
-      if (seatInfo) {
-        seatInfo += " • ";
-      }
-
-      seatInfo += `Berth ${safeText(berth)}`;
-    }
-
-    if (berthType) {
-
-      seatInfo +=
-        ` (${safeText(berthType)})`;
-    }
-
-    lines.push(
-      `   Seat: ${seatInfo}`
-    );
-
-  }
-
-  return lines.join("\n");
-
-}
-
-/* =========================================
-   FORMAT PNR RESPONSE
-========================================= */
-
-function formatPNRResponse(apiResponse, pnr) {
-
-  const root =
-    apiResponse?.data?.data ??
-    apiResponse?.data ??
-    apiResponse;
-
-  const pnrNumber =
-    findValue(
-      root,
-      [
-        "pnrNumber",
-        "pnr",
-        "pnrNo"
-      ]
-    ) || pnr;
-
-  const trainNumber =
-    findValue(
-      root,
-      [
-        "trainNumber",
-        "trainNo"
-      ]
-    );
-
-  const trainName =
-    findValue(
-      root,
-      [
-        "trainName"
-      ]
-    );
-
-  const from =
-    findValue(
-      root,
-      [
-        "from",
-        "source",
-        "origin",
-        "boardingStation"
-      ]
-    );
-
-  const to =
-    findValue(
-      root,
-      [
-        "to",
-        "destination",
-        "dest",
-        "reservationUpto"
-      ]
-    );
-
-  const journeyDate =
-    findValue(
-      root,
-      [
-        "journeyDate",
-        "date",
-        "boardingDate"
-      ]
-    );
-
-  const journeyClass =
-    findValue(
-      root,
-      [
-        "class",
-        "classCode",
-        "travelClass"
-      ]
-    );
-
-  const quota =
-    findValue(
-      root,
-      [
-        "quota",
-        "quotaCode"
-      ]
-    );
-
-  const fare =
-    findValue(
-      root,
-      [
-        "fare",
-        "totalFare",
-        "amount"
-      ]
-    );
-
-  const chartStatus =
-    findValue(
-      root,
-      [
-        "chartStatus",
-        "chartPrepared",
-        "chartPreparationStatus"
-      ]
-    );
-
-  const passengers =
-    findPassengers(root);
-
-  const lines = [];
-
-  lines.push("🎫 *PNR STATUS*");
-  lines.push("");
-  lines.push(`🔢 PNR: *${safeText(pnrNumber)}*`);
-
-  if (trainNumber || trainName) {
-
-    let trainLine = "🚆 ";
-
-    if (trainNumber) {
-      trainLine += safeText(trainNumber);
-    }
-
-    if (trainName) {
-
-      if (trainNumber) {
-        trainLine += " • ";
-      }
-
-      trainLine += safeText(trainName);
-    }
-
-    lines.push(trainLine);
-  }
-
-  if (from || to) {
-
-    lines.push(
-      `📍 ${safeText(from) || "N/A"} → ${safeText(to) || "N/A"}`
-    );
-
-  }
-
-  if (journeyDate) {
-
-    lines.push(
-      `📅 Journey: ${safeText(journeyDate)}`
-    );
-
-  }
-
-  if (journeyClass) {
-
-    lines.push(
-      `💺 Class: ${safeText(journeyClass)}`
-    );
-
-  }
-
-  if (quota) {
-
-    lines.push(
-      `🎟️ Quota: ${safeText(quota)}`
-    );
-
-  }
-
-  if (fare !== null && fare !== undefined) {
-
-    lines.push(
-      `💰 Fare: ₹${safeText(fare)}`
-    );
-
-  }
-
-  if (chartStatus !== null && chartStatus !== undefined) {
-
-    lines.push(
-      `📋 Chart: ${safeText(chartStatus)}`
-    );
-
-  }
-
-  if (
-    Array.isArray(passengers) &&
-    passengers.length > 0
-  ) {
-
-    lines.push("");
-    lines.push(
-      `👤 *PASSENGER STATUS (${passengers.length})*`
-    );
-
-    lines.push("");
-
-    passengers.forEach((passenger, index) => {
-
-      lines.push(
-        formatPassengerStatus(
-          passenger,
-          index + 1
-        )
-      );
-
-      if (index < passengers.length - 1) {
-        lines.push("");
-      }
-
-    });
-
-  } else {
-
-    lines.push("");
-    lines.push(
-      "👤 Passenger details are currently unavailable."
-    );
-
-  }
-
-  lines.push("");
-  lines.push(
-    "ℹ️ Current status may change until chart preparation."
-  );
-
-  return lines.join("\n");
-
-}
-
-/* =========================================
-   GET PNR STATUS
-========================================= */
+/* =========================================================
+   PNR STATUS
+========================================================= */
 
 async function getPNRStatus(pnr) {
 
-  if (!RAILRADAR_API_KEY) {
+  try {
 
-    throw new Error(
-      "RAILRADAR_API_KEY is missing"
+    if (!RAILRADAR_API_KEY) {
+
+      console.error(
+        "RAILRADAR_API_KEY is missing"
+      );
+
+      return {
+        success: false,
+        message:
+          "Railway service configuration missing."
+      };
+
+    }
+
+
+    const url =
+      `https://api.railradar.in/v1/pnr/${pnr}`;
+
+
+    console.log(
+      "PNR API REQUEST:",
+      url
     );
 
-  }
 
-  const url =
-    `https://api.railradar.in/v1/pnr/${pnr}`;
+    const response = await axios.get(
 
-  console.log(
-    "PNR API REQUEST:",
-    pnr
-  );
-
-  const response =
-    await axios.get(
       url,
+
       {
         headers: {
           Authorization:
             `Bearer ${RAILRADAR_API_KEY}`,
-          Accept:
+
+          "Content-Type":
             "application/json"
         },
+
         timeout: 15000
       }
+
     );
 
-  console.log(
-    "PNR API RESPONSE RECEIVED"
-  );
 
-  return response.data;
+    const result = response.data;
 
-}
 
-/* =========================================
-   PNR ERROR MESSAGE
-========================================= */
-
-function getPNRErrorMessage(error) {
-
-  const status =
-    error?.response?.status;
-
-  const apiError =
-    error?.response?.data?.error;
-
-  if (status === 401) {
-
-    return (
-      "⚠️ PNR service authentication error.\n\n" +
-      "Railway API keyটি ঠিক আছে কি না পরীক্ষা করুন।"
+    console.log(
+      "PNR API SUCCESS"
     );
 
-  }
 
-  if (status === 404) {
+    if (
+      !result ||
+      result.success !== true ||
+      !result.data
+    ) {
 
-    return (
-      "❌ এই PNR নম্বরের কোনো তথ্য পাওয়া যায়নি।\n\n" +
-      "দয়া করে ১০ সংখ্যার PNR নম্বরটি আবার পাঠান।"
-    );
+      return {
+        success: false,
+        message:
+          "PNR information পাওয়া যায়নি।"
+      };
 
-  }
+    }
 
-  if (status === 429) {
 
-    return (
-      "⏳ এই মুহূর্তে PNR service-এর request limit পূর্ণ হয়েছে।\n\n" +
-      "কিছুক্ষণ পরে আবার চেষ্টা করুন।"
-    );
+    return {
+      success: true,
+      data: result.data
+    };
 
-  }
 
-  if (status === 503) {
-
-    return (
-      "⚠️ Railway data service এই মুহূর্তে সাময়িকভাবে unavailable।\n\n" +
-      "কিছুক্ষণ পরে আবার চেষ্টা করুন।"
-    );
-
-  }
-
-  if (apiError?.message) {
+  } catch (error) {
 
     console.error(
       "PNR API ERROR:",
-      apiError
+      error.response?.data ||
+      error.message
     );
 
+
+    const status =
+      error.response?.status;
+
+
+    if (status === 401) {
+
+      return {
+        success: false,
+        message:
+          "Railway API key সঠিক নয়।"
+      };
+
+    }
+
+
+    if (status === 404) {
+
+      return {
+        success: false,
+        message:
+          "এই PNR-এর তথ্য পাওয়া যায়নি। PNR নম্বরটি আবার পরীক্ষা করুন।"
+      };
+
+    }
+
+
+    if (status === 429) {
+
+      return {
+        success: false,
+        message:
+          "Railway service-এর request limit আপাতত পূর্ণ হয়েছে। কিছুক্ষণ পরে চেষ্টা করুন।"
+      };
+
+    }
+
+
+    if (status === 503) {
+
+      return {
+        success: false,
+        message:
+          "Railway service আপাতত unavailable। কিছুক্ষণ পরে আবার চেষ্টা করুন।"
+      };
+
+    }
+
+
+    return {
+      success: false,
+      message:
+        "PNR status এখন পাওয়া যাচ্ছে না। কিছুক্ষণ পরে আবার চেষ্টা করুন।"
+    };
+
   }
-
-  console.error(
-    "PNR ERROR:",
-    error?.response?.data ||
-    error?.message ||
-    error
-  );
-
-  return (
-    "❌ PNR status এখন পাওয়া যাচ্ছে না।\n\n" +
-    "কিছুক্ষণ পরে আবার চেষ্টা করুন।"
-  );
 
 }
 
-/* =========================================
-   GEMINI AI
-========================================= */
 
-async function generateAIReply(userMessage) {
+/* =========================================================
+   FORMAT PNR RESPONSE
+   Professional WhatsApp format
+========================================================= */
 
-  if (!ai) {
+function formatPNRStatus(data) {
 
-    return (
-      "দুঃখিত, AI service বর্তমানে configured নেই।"
+  const pnr =
+    safeText(
+      data.pnrNumber,
+      "Unknown"
     );
 
+
+  const train =
+    data.train || {};
+
+
+  const journey =
+    data.journey || {};
+
+
+  const charting =
+    data.charting || {};
+
+
+  const source =
+    train.source || {};
+
+
+  const destination =
+    train.destination || {};
+
+
+  const boardingPoint =
+    train.boardingPoint || {};
+
+
+  const reservationUpto =
+    train.reservationUpto || {};
+
+
+  let message = "";
+
+
+  message +=
+    `🎫 *PNR STATUS*\n`;
+
+  message +=
+    `━━━━━━━━━━━━━━━━━━\n\n`;
+
+
+  message +=
+    `🔢 *PNR:* ${pnr}\n\n`;
+
+
+  /* TRAIN */
+
+  const trainNumber =
+    safeText(
+      train.number,
+      ""
+    );
+
+  const trainName =
+    safeText(
+      train.name,
+      ""
+    );
+
+
+  if (
+    trainNumber ||
+    trainName
+  ) {
+
+    message +=
+      `🚆 *Train:* `;
+
+    if (trainNumber) {
+      message += trainNumber;
+    }
+
+    if (
+      trainNumber &&
+      trainName
+    ) {
+      message += " - ";
+    }
+
+    if (trainName) {
+      message += trainName;
+    }
+
+    message += "\n";
+
   }
+
+
+  /* ROUTE */
+
+  const sourceName =
+    safeText(
+      source.name,
+      safeText(
+        source.code,
+        ""
+      )
+    );
+
+
+  const destinationName =
+    safeText(
+      destination.name,
+      safeText(
+        destination.code,
+        ""
+      )
+    );
+
+
+  if (
+    sourceName ||
+    destinationName
+  ) {
+
+    message +=
+      `🛤️ *Route:* ${sourceName} → ${destinationName}\n`;
+
+  }
+
+
+  /* JOURNEY DATE */
+
+  const journeyDate =
+    safeText(
+      journey.date,
+      ""
+    );
+
+
+  if (journeyDate) {
+
+    message +=
+      `📅 *Journey:* ${journeyDate}\n`;
+
+  }
+
+
+  /* CLASS */
+
+  const className =
+    safeText(
+      journey.class,
+      ""
+    );
+
+
+  if (className) {
+
+    message +=
+      `💺 *Class:* ${className}\n`;
+
+  }
+
+
+  /* QUOTA */
+
+  const quota =
+    safeText(
+      journey.quota,
+      ""
+    );
+
+
+  if (quota) {
+
+    message +=
+      `🎟️ *Quota:* ${quota}\n`;
+
+  }
+
+
+  /* FARE */
+
+  const fare =
+    safeText(
+      journey.bookingFare,
+      ""
+    );
+
+
+  if (fare) {
+
+    message +=
+      `💰 *Fare:* ₹${fare}\n`;
+
+  }
+
+
+  /* BOARDING */
+
+  const boardingName =
+    safeText(
+      boardingPoint.name,
+      safeText(
+        boardingPoint.code,
+        ""
+      )
+    );
+
+
+  if (boardingName) {
+
+    message +=
+      `🚉 *Boarding:* ${boardingName}\n`;
+
+  }
+
+
+  /* RESERVATION UPTO */
+
+  const reservationName =
+    safeText(
+      reservationUpto.name,
+      safeText(
+        reservationUpto.code,
+        ""
+      )
+    );
+
+
+  if (reservationName) {
+
+    message +=
+      `🏁 *Reserved Upto:* ${reservationName}\n`;
+
+  }
+
+
+  message +=
+    `\n👤 *PASSENGER STATUS*\n`;
+
+  message +=
+    `━━━━━━━━━━━━━━━━━━\n`;
+
+
+  const passengers =
+    Array.isArray(data.passengers)
+      ? data.passengers
+      : [];
+
+
+  if (passengers.length === 0) {
+
+    message +=
+      `No passenger information available.\n`;
+
+  }
+
+
+  passengers.forEach(
+    (passenger, index) => {
+
+      const passengerNumber =
+        safeText(
+          passenger.passengerNumber,
+          index + 1
+        );
+
+
+      const bookingStatus =
+        safeText(
+          passenger.bookingStatus,
+          "N/A"
+        );
+
+
+      const currentStatus =
+        safeText(
+          passenger.currentStatus,
+          "N/A"
+        );
+
+
+      const coach =
+        safeText(
+          passenger.coach,
+          ""
+        );
+
+
+      const berthNumber =
+        safeText(
+          passenger.berthNumber,
+          ""
+        );
+
+
+      const berthCode =
+        safeText(
+          passenger.berthCode,
+          ""
+        );
+
+
+      let currentDisplay =
+        currentStatus;
+
+
+      /*
+        If confirmed and coach/berth exists,
+        show professional format.
+      */
+
+      if (
+        coach &&
+        berthNumber
+      ) {
+
+        currentDisplay =
+          `${currentStatus} • ${coach} • Berth ${berthNumber}`;
+
+        if (berthCode) {
+
+          currentDisplay +=
+            ` (${berthCode})`;
+
+        }
+
+      }
+
+
+      message +=
+        `\n${passengerNumber}. *Booking:* ${bookingStatus}\n`;
+
+      message +=
+        `   *Current:* ${currentDisplay}\n`;
+
+
+      if (
+        passenger.isConfirmed === true
+      ) {
+
+        message +=
+          `   🟢 Confirmed\n`;
+
+      } else if (
+        passenger.isRAC === true
+      ) {
+
+        message +=
+          `   🟡 RAC\n`;
+
+      } else if (
+        passenger.isWaitlisted === true
+      ) {
+
+        message +=
+          `   🟠 Waitlisted\n`;
+
+      } else if (
+        passenger.isCancelled === true
+      ) {
+
+        message +=
+          `   🔴 Cancelled\n`;
+
+      }
+
+    }
+  );
+
+
+  /* CHART STATUS */
+
+  const chartStatus =
+    safeText(
+      charting.status,
+      ""
+    );
+
+
+  if (chartStatus) {
+
+    message +=
+      `\n📋 *Chart:* ${chartStatus}\n`;
+
+  }
+
+
+  message +=
+    `\n━━━━━━━━━━━━━━━━━━\n`;
+
+  message +=
+    `🚆 *Sealdah Train Service*`;
+
+
+  return message.trim();
+
+}
+
+
+/* =========================================================
+   DETECT PNR
+========================================================= */
+
+function detectPNR(message) {
+
+  if (!message) {
+    return null;
+  }
+
+
+  /*
+     Exact 10 digit PNR
+  */
+
+  const match =
+    message.match(
+      /\b\d{10}\b/
+    );
+
+
+  if (!match) {
+    return null;
+  }
+
+
+  const pnr =
+    match[0];
+
+
+  /*
+     Only treat as PNR when the message
+     contains PNR-related wording OR
+     the message is exactly a 10-digit number.
+  */
+
+  const lower =
+    message.toLowerCase();
+
+
+  const pnrWords = [
+    "pnr",
+    "পিএনআর",
+    "pnr status",
+    "pnr status",
+    "passenger status"
+  ];
+
+
+  const isPNRMessage =
+    pnrWords.some(
+      word =>
+        lower.includes(word)
+    ) ||
+    /^\d{10}$/.test(
+      message.trim()
+    );
+
+
+  if (!isPNRMessage) {
+    return null;
+  }
+
+
+  return pnr;
+
+}
+
+
+/* =========================================================
+   GEMINI AI
+========================================================= */
+
+async function generateAIReply(userMessage) {
 
   try {
 
     const systemInstruction = `
+
 তুমি "Sealdah Train Service" WhatsApp AI Assistant।
 
-তোমার কাজ:
-- ভারতীয় রেল
-- Sealdah Division
-- train information
-- station information
-- route guidance
-- railway general information
+তোমার কাজ হলো ভারতীয় রেলের বিশেষ করে Sealdah Division-এর
+ট্রেন সংক্রান্ত প্রশ্নে ব্যবহারকারীকে সহজ ভাষায় সাহায্য করা।
 
 নিয়ম:
 
 1. ব্যবহারকারী বাংলায় লিখলে বাংলায় উত্তর দেবে।
-2. ইংরেজিতে লিখলে ইংরেজিতে উত্তর দেবে।
-3. উত্তর ছোট, পরিষ্কার এবং WhatsApp-friendly হবে।
-4. "হ্যালো", "হাই", "Hello" সুন্দরভাবে উত্তর দেবে।
-5. 10-digit PNR থাকলে PNR status নিজে থেকে বানাবে না।
-6. PNR status application code থেকে আসে।
-7. Live train data না থাকলে কখনো সময় বা location বানিয়ে বলবে না।
-8. নিশ্চিত তথ্য না থাকলে পরিষ্কারভাবে বলবে যে live data যাচাই করা প্রয়োজন।
-9. অপ্রয়োজনীয় দীর্ঘ উত্তর দেবে না।
-10. Railway information-এ ভুল তথ্য তৈরি করবে না।
+2. ব্যবহারকারী ইংরেজিতে লিখলে ইংরেজিতে উত্তর দেবে।
+3. উত্তর ছোট এবং WhatsApp-friendly রাখবে।
+4. "হ্যালো", "হাই", "Hello" ইত্যাদির সুন্দরভাবে উত্তর দেবে।
+5. ব্যবহারকারী ট্রেন সম্পর্কে প্রশ্ন করলে প্রশ্নটি বুঝবে।
+6. Source ও destination বুঝবে।
+7. আজ, কাল, তারিখ ইত্যাদি বুঝবে।
+8. Train number থাকলে বুঝবে।
+9. Live train location সম্পর্কে নিশ্চিত data না থাকলে বানিয়ে বলবে না।
+10. কোনো নির্দিষ্ট train time নিশ্চিত না হলে বানিয়ে বলবে না।
+11. সাধারণ railway information দিতে পারবে।
+12. অপ্রয়োজনীয় প্রশ্ন করবে না।
+13. উত্তর পরিষ্কার, সংক্ষিপ্ত এবং professional হবে।
 
-উদাহরণ:
-
-User:
-হ্যালো
+User: হ্যালো
 
 Answer:
-নমস্কার! 🚆
-Sealdah Train Service AI Bot-এ আপনাকে স্বাগতম।
+নমস্কার! 🚆 Sealdah Train Service AI Bot-এ আপনাকে স্বাগতম।
 কী জানতে চান?
 
-User:
-PNR 6508967728
-
-Answer:
-PNR status check করা হচ্ছে...
 `;
 
     const response =
@@ -994,21 +946,27 @@ PNR status check করা হচ্ছে...
 
         config: {
 
-          systemInstruction,
+          systemInstruction:
+            systemInstruction,
 
-          temperature: 0.2,
+          temperature:
+            0.2,
 
-          maxOutputTokens: 500
+          maxOutputTokens:
+            500
 
         }
 
       });
 
+
     const reply =
       response.text ||
       "দুঃখিত, এই মুহূর্তে উত্তর তৈরি করা যাচ্ছে না।";
 
+
     return reply.trim();
+
 
   } catch (error) {
 
@@ -1018,8 +976,9 @@ PNR status check করা হচ্ছে...
       error
     );
 
+
     return (
-      "দুঃখিত, AI service এই মুহূর্তে ব্যস্ত আছে।\n" +
+      "দুঃখিত, AI service এই মুহূর্তে ব্যস্ত আছে। " +
       "কিছুক্ষণ পরে আবার চেষ্টা করুন।"
     );
 
@@ -1027,13 +986,19 @@ PNR status check করা হচ্ছে...
 
 }
 
-/* =========================================
+
+/* =========================================================
    WHATSAPP WEBHOOK
-========================================= */
+========================================================= */
 
 app.post("/webhook", async (req, res) => {
 
+  /*
+     Immediately acknowledge WhatsApp
+  */
+
   res.sendStatus(200);
+
 
   try {
 
@@ -1041,17 +1006,22 @@ app.post("/webhook", async (req, res) => {
       "========== NEW WHATSAPP WEBHOOK =========="
     );
 
+
     const entry =
       req.body?.entry?.[0];
+
 
     const change =
       entry?.changes?.[0];
 
+
     const value =
       change?.value;
 
+
     const messages =
       value?.messages;
+
 
     if (
       !messages ||
@@ -1066,57 +1036,74 @@ app.post("/webhook", async (req, res) => {
 
     }
 
+
     const message =
       messages[0];
 
+
     const from =
       message.from;
+
 
     console.log(
       "ACTUAL SENDER NUMBER:",
       from
     );
 
+
     console.log(
       "BUSINESS PHONE NUMBER ID:",
       value?.metadata?.phone_number_id
     );
 
-    /* =====================================
-       TEXT ONLY
-    ===================================== */
+
+    /* =====================================================
+       ONLY TEXT
+    ===================================================== */
 
     if (
       message.type !== "text"
     ) {
 
       await sendWhatsAppMessage(
+
         from,
+
         "দুঃখিত, আপাতত আমি শুধুমাত্র text message গ্রহণ করতে পারি।"
+
       );
 
       return;
 
     }
 
+
     const userMessage =
       message.text?.body?.trim();
+
 
     if (!userMessage) {
       return;
     }
+
 
     console.log(
       "USER MESSAGE:",
       userMessage
     );
 
-    /* =====================================
+
+    /* =====================================================
        PNR DETECTION
-    ===================================== */
+       PNR goes directly to RailRadar.
+       Gemini is NOT used for PNR.
+    ===================================================== */
 
     const pnr =
-      extractPNR(userMessage);
+      detectPNR(
+        userMessage
+      );
+
 
     if (pnr) {
 
@@ -1125,84 +1112,107 @@ app.post("/webhook", async (req, res) => {
         pnr
       );
 
-      try {
 
-        const pnrData =
-          await getPNRStatus(pnr);
+      const pnrResult =
+        await getPNRStatus(
+          pnr
+        );
 
-        const reply =
-          formatPNRResponse(
-            pnrData,
-            pnr
+
+      let reply;
+
+
+      if (
+        pnrResult.success
+      ) {
+
+        reply =
+          formatPNRStatus(
+            pnrResult.data
           );
 
-        console.log(
-          "PNR FINAL REPLY:",
-          reply
-        );
+      } else {
 
-        await sendWhatsAppMessage(
-          from,
-          reply
-        );
-
-      } catch (error) {
-
-        const errorReply =
-          getPNRErrorMessage(error);
-
-        await sendWhatsAppMessage(
-          from,
-          errorReply
-        );
+        reply =
+          `🎫 *PNR STATUS*\n\n` +
+          `PNR: *${pnr}*\n\n` +
+          `⚠️ ${pnrResult.message}`;
 
       }
 
+
       console.log(
-        "PNR reply completed for:",
+        "FINAL PNR REPLY:",
+        reply
+      );
+
+
+      console.log(
+        "Sending WhatsApp reply to:",
         from
       );
+
+
+      await sendWhatsAppMessage(
+        from,
+        reply
+      );
+
+
+      console.log(
+        "PNR Reply completed for:",
+        from
+      );
+
 
       console.log(
         "=========================================="
       );
 
+
       return;
 
     }
 
-    /* =====================================
-       NORMAL AI QUESTION
-    ===================================== */
+
+    /* =====================================================
+       NORMAL AI MESSAGE
+    ===================================================== */
 
     const reply =
       await generateAIReply(
         userMessage
       );
 
+
     console.log(
       "FINAL REPLY:",
       reply
     );
+
 
     console.log(
       "Sending WhatsApp reply to:",
       from
     );
 
+
     await sendWhatsAppMessage(
       from,
       reply
     );
+
 
     console.log(
       "Reply completed for:",
       from
     );
 
+
     console.log(
       "=========================================="
     );
+
 
   } catch (error) {
 
@@ -1217,9 +1227,10 @@ app.post("/webhook", async (req, res) => {
 
 });
 
-/* =========================================
+
+/* =========================================================
    START SERVER
-========================================= */
+========================================================= */
 
 app.listen(
   PORT,
@@ -1237,22 +1248,27 @@ app.listen(
       "================================"
     );
 
+
     console.log(
       "Server running on port:",
       PORT
     );
 
+
     console.log(
       "Health: /api"
     );
+
 
     console.log(
       "Webhook: /webhook"
     );
 
+
     console.log(
       "Privacy: /privacy"
     );
+
 
     console.log(
       "Gemini API Key:",
@@ -1261,12 +1277,14 @@ app.listen(
         : "MISSING"
     );
 
+
     console.log(
       "RailRadar API Key:",
       RAILRADAR_API_KEY
         ? "OK"
         : "MISSING"
     );
+
 
     console.log(
       "WhatsApp Token:",
@@ -1275,12 +1293,14 @@ app.listen(
         : "MISSING"
     );
 
+
     console.log(
       "Phone Number ID:",
       PHONE_NUMBER_ID
         ? "OK"
         : "MISSING"
     );
+
 
     console.log(
       "================================"
