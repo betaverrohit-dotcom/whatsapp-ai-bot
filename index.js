@@ -77,19 +77,23 @@ app.get("/webhook", (req, res) => {
 ========================================
 SEND WHATSAPP MESSAGE
 ========================================
-
-IMPORTANT:
-
-The "to" number is received from message.from.
-
-Therefore the reply goes back to the SAME
-WhatsApp number that sent the message.
 */
 
 async function sendWhatsAppMessage(to, text) {
   try {
+    if (!to) {
+      console.error("ERROR: Recipient number is missing");
+      return;
+    }
+
     const url =
       `https://graph.facebook.com/v22.0/${PHONE_NUMBER_ID}/messages`;
+
+    console.log("================================");
+    console.log("SENDING WHATSAPP MESSAGE");
+    console.log("To:", to);
+    console.log("Phone Number ID:", PHONE_NUMBER_ID);
+    console.log("================================");
 
     await axios.post(
       url,
@@ -111,7 +115,7 @@ async function sendWhatsAppMessage(to, text) {
       }
     );
 
-    console.log("Reply sent to:", to);
+    console.log("Reply sent successfully to:", to);
 
   } catch (error) {
     console.error(
@@ -148,8 +152,10 @@ async function generateAIReply(userMessage) {
 4. Train number, train name, source, destination, station এবং timing সম্পর্কিত প্রশ্ন বুঝতে চেষ্টা করা।
 5. তথ্য নিশ্চিত না হলে অনুমান করে নির্দিষ্ট সময় বা live status তৈরি করবে না।
 6. Live train status-এর জন্য ব্যবহারকারীকে train number এবং journey date দিতে বলবে।
-7. Source এবং destination দেওয়া হলে কোন তথ্য প্রয়োজন তা পরিষ্কারভাবে জানাবে।
+7. Source এবং destination দেওয়া হলে প্রয়োজনীয় তথ্য পরিষ্কারভাবে জানাবে।
 8. উত্তর ছোট, পরিষ্কার এবং WhatsApp-friendly হবে।
+9. ব্যবহারকারী যদি শুধু একটি destination বা station-এর নাম দেয়, তাহলে তার প্রশ্নটি বুঝে প্রয়োজনীয় clarification চাইবে।
+10. Live railway data না থাকলে কখনো মিথ্যা live timing তৈরি করবে না।
 
 গুরুত্বপূর্ণ:
 তুমি কোনো live railway database access আছে বলে মিথ্যা দাবি করবে না।
@@ -169,7 +175,10 @@ async function generateAIReply(userMessage) {
     );
 
   } catch (error) {
-    console.error("Groq Error:", error);
+    console.error(
+      "Groq Error:",
+      error.response?.data || error.message || error
+    );
 
     return "দুঃখিত, AI service এই মুহূর্তে ব্যস্ত আছে। কিছুক্ষণ পরে আবার চেষ্টা করুন।";
   }
@@ -184,23 +193,43 @@ WHATSAPP INCOMING MESSAGE
 app.post("/webhook", async (req, res) => {
 
   /*
-  IMPORTANT:
   WhatsApp expects a quick 200 response.
   */
-
   res.sendStatus(200);
 
   try {
 
     const entry = req.body?.entry?.[0];
-
     const changes = entry?.changes?.[0];
-
     const value = changes?.value;
+
+    /*
+    ========================================
+    WHATSAPP DEBUG INFORMATION
+    ========================================
+    */
+
+    console.log("");
+    console.log("========================================");
+    console.log("WHATSAPP WEBHOOK RECEIVED");
+    console.log("========================================");
+
+    console.log(
+      "Business Phone Number ID:",
+      value?.metadata?.phone_number_id
+    );
+
+    console.log(
+      "Business Display Number:",
+      value?.metadata?.display_phone_number
+    );
+
+    console.log("========================================");
 
     const messages = value?.messages;
 
     if (!messages || messages.length === 0) {
+      console.log("No incoming message found.");
       return;
     }
 
@@ -208,18 +237,25 @@ app.post("/webhook", async (req, res) => {
 
     /*
     ========================================
-    THIS IS THE IMPORTANT PART
+    USER'S WHATSAPP NUMBER
     ========================================
 
-    message.from = WhatsApp number of the person
-    who sent the message.
+    message.from = যে WhatsApp number থেকে
+    message এসেছে।
 
-    We MUST reply to this number.
+    আমরা এই নম্বরেই reply পাঠাব।
     */
 
     const from = message.from;
 
-    console.log("Incoming message from:", from);
+    console.log("Incoming message FROM:", from);
+
+    console.log(
+      "Incoming message TO:",
+      value?.metadata?.display_phone_number
+    );
+
+    console.log("Message type:", message.type);
 
     /*
     ========================================
@@ -241,6 +277,7 @@ app.post("/webhook", async (req, res) => {
       message.text?.body?.trim();
 
     if (!userMessage) {
+      console.log("Empty message received.");
       return;
     }
 
@@ -259,8 +296,18 @@ app.post("/webhook", async (req, res) => {
 
     /*
     ========================================
-    SEND TO SAME USER
+    SEND REPLY TO SAME USER
     ========================================
+
+    খুব গুরুত্বপূর্ণ:
+    এখানে from ব্যবহার করা হয়েছে।
+
+    অর্থাৎ:
+
+    9477509768 থেকে message এলে
+    reply যাবে 9477509768-এ।
+
+    অন্য কোনো fixed/test number ব্যবহার করা হয়নি।
     */
 
     await sendWhatsAppMessage(
@@ -276,7 +323,6 @@ app.post("/webhook", async (req, res) => {
     );
 
   }
-
 });
 
 /*
