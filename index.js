@@ -46,6 +46,7 @@ function cleanText(text = "") {
 }
 
 function formatDateDDMMYYYY(date) {
+  if (!date) return "";
   const [y, m, d] = date.split("-");
   return `${d}-${m}-${y}`;
 }
@@ -102,7 +103,6 @@ function findStationCode(text) {
    GPS LOCATION DATA (Sealdah Division)
 ========================================================= */
 const STATION_COORDS = [
-  // MAIN LINE
   { name: "শিয়ালদা (Sealdah)", lat: 22.5675, lon: 88.3714, code: "SDAH" },
   { name: "বিধাননগর রোড (Bidhannagar Road)", lat: 22.5934, lon: 88.3912, code: "BNXR" },
   { name: "দমদম জংশন (Dum Dum Jn)", lat: 22.6225, lon: 88.3953, code: "DDJ" },
@@ -132,56 +132,25 @@ const STATION_COORDS = [
   { name: "শান্তিপুর (Shantipur)", lat: 23.2458, lon: 88.4326, code: "STB" },
   { name: "বাদকুল্লা (Badkulla)", lat: 23.2928, lon: 88.5312, code: "BDZ" },
   { name: "কৃষ্ণনগর (Krishnanagar)", lat: 23.4013, lon: 88.4998, code: "KNJ" },
-  { name: "বেথুয়াডহরি (Bethuadahari)", lat: 23.5936, lon: 88.3842, code: "BTY" },
-  { name: "বেলডাঙ্গা (Beldanga)", lat: 23.9318, lon: 88.2464, code: "BEB" },
-  { name: "বহরমপুর কোর্ট (Berhampore Court)", lat: 24.0954, lon: 88.2589, code: "BPC" },
-  { name: "মুর্শিদাবাদ (Murshidabad)", lat: 24.1843, lon: 88.2709, code: "MBB" },
-  { name: "লালগোলা (Lalgola)", lat: 24.4175, lon: 88.2464, code: "LGL" },
-  // BONGAON LINE
   { name: "দমদম ক্যান্টনমেন্ট (Dum Dum Cantt)", lat: 22.6358, lon: 88.4125, code: "DDC" },
   { name: "বিরাটি (Birati)", lat: 22.6653, lon: 88.4342, code: "BBT" },
   { name: "নিউ ব্যারাকপুর (New Barrackpore)", lat: 22.6841, lon: 88.4485, code: "NBE" },
   { name: "মধ্যমগ্রাম (Madhyamgram)", lat: 22.6999, lon: 88.4623, code: "MMG" },
   { name: "হৃদয়পুর (Hridaypur)", lat: 22.7089, lon: 88.4721, code: "HHR" },
   { name: "বারাসত জংশন (Barasat Jn)", lat: 22.7214, lon: 88.4804, code: "BT" },
-  { name: "বামনগাছি (Bamangachhi)", lat: 22.7533, lon: 88.5134, code: "BMG" },
-  { name: "দত্তপুকুর (Dattapukur)", lat: 22.7756, lon: 88.5412, code: "DTK" },
-  { name: "অশোকনগর রোড (Ashoknagar Road)", lat: 22.8239, lon: 88.6186, code: "ASKR" },
-  { name: "হাবরা (Habra)", lat: 22.8360, lon: 88.6323, code: "HB" },
-  { name: "মছলন্দপুর (Machhalandapur)", lat: 22.8791, lon: 88.7047, code: "MSL" },
-  { name: "গোবরডাঙ্গা (Gobardanga)", lat: 22.8845, lon: 88.7618, code: "GBG" },
-  { name: "ঠাকুরনগর (Thakurnagar)", lat: 22.8988, lon: 88.7909, code: "TKNR" },
-  { name: "চাঁদপাড়া (Chandpara)", lat: 22.9467, lon: 88.8268, code: "CDP" },
   { name: "বনগাঁ জংশন (Bongaon Jn)", lat: 23.0478, lon: 88.8256, code: "BNJ" },
-  { name: "বসিরহাট (Basirhat)", lat: 22.6631, lon: 88.8893, code: "BSHT" },
-  { name: "হাসনাবাদ (Hasnabad)", lat: 22.5855, lon: 88.8989, code: "HNB" },
-  // SOUTH LINE
-  { name: "পার্ক সার্কাস (Park Circus)", lat: 22.5445, lon: 88.3712, code: "PQS" },
   { name: "বালিগঞ্জ জংশন (Ballygunge Jn)", lat: 22.5270, lon: 88.3653, code: "BLN" },
-  { name: "ঢাকুরিয়া (Dhakuria)", lat: 22.5134, lon: 88.3664, code: "DHK" },
   { name: "যাদবপুর (Jadavpur)", lat: 22.4975, lon: 88.3725, code: "JDP" },
-  { name: "বাঘাযতীন (Baghajatin)", lat: 22.4815, lon: 88.3794, code: "BGJT" },
-  { name: "নিউ গড়িয়া (New Garia)", lat: 22.4697, lon: 88.3888, code: "NGRI" },
-  { name: "গড়িয়া (Garia)", lat: 22.4646, lon: 88.3879, code: "GIA" },
-  { name: "নরেন্দ্রপুর (Narendrapur)", lat: 22.4419, lon: 88.3976, code: "NRPR" },
   { name: "সোনারপুর জংশন (Sonarpur Jn)", lat: 22.4227, lon: 88.4168, code: "SPR" },
-  { name: "সুভাষ গ্রাম (Subhas Gram)", lat: 22.3962, lon: 88.4239, code: "MAK" },
   { name: "বারুইপুর জংশন (Baruipur Jn)", lat: 22.3618, lon: 88.4316, code: "BRP" },
-  { name: "ডায়মন্ড হারবার (Diamond Harbour)", lat: 22.1884, lon: 88.1925, code: "DH" },
-  { name: "জয়নগর মজিলপুর (Jaynagar Majilpur)", lat: 22.1764, lon: 88.4206, code: "JNM" },
-  { name: "কাকদ্বীপ (Kakdwip)", lat: 21.8797, lon: 88.1887, code: "KWDP" },
-  { name: "নামখানা (Namkhana)", lat: 21.7656, lon: 88.2323, code: "NMKA" },
-  { name: "ক্যানিং (Canning)", lat: 22.3117, lon: 88.6586, code: "CG" },
-  { name: "মাজেরহাট (Majerhat)", lat: 22.5165, lon: 88.3183, code: "MJT" },
-  { name: "বজবজ (Budge Budge)", lat: 22.4831, lon: 88.1812, code: "BGB" }
+  { name: "ডায়মন্ড হারবার (Diamond Harbour)", lat: 22.1884, lon: 88.1925, code: "DH" }
 ];
 
 function getNearestStation(userLat, userLon) {
   let nearest = null;
   let minDistance = Infinity;
-
   for (const station of STATION_COORDS) {
-    const R = 6371; // Earth radius in km
+    const R = 6371; 
     const dLat = (station.lat - userLat) * (Math.PI / 180);
     const dLon = (station.lon - userLon) * (Math.PI / 180);
     const a =
@@ -224,9 +193,7 @@ function detectDate(text) {
 
 function detectAfterHour(text) {
   const normalized = bengaliToEnglishDigits(String(text).toLowerCase());
-  if (normalized.includes("বারোটার পর") || normalized.includes("12টার পর") || normalized.includes("12 pm") || normalized.includes("দুপুর 12")) {
-    return 12;
-  }
+  if (normalized.includes("বারোটার পর") || normalized.includes("12টার পর") || normalized.includes("12 pm") || normalized.includes("দুপুর 12")) return 12;
   const hourMatch = normalized.match(/(\d{1,2})\s*(?:টার|টা|টায়|টা থেকে|টার পর|টা পর|pm|am)/i);
   if (hourMatch) {
     let hour = Number(hourMatch[1]);
@@ -260,9 +227,8 @@ async function railRadarGet(path, params = {}) {
 }
 
 async function searchStation(query) {
-  try {
-    return await railRadarGet("/v1/lookup/search/stations", { q: query, limit: 10 });
-  } catch (error) { return null; }
+  try { return await railRadarGet("/v1/lookup/search/stations", { q: query, limit: 10 }); } 
+  catch (error) { return null; }
 }
 
 async function resolveStation(value) {
@@ -271,16 +237,12 @@ async function resolveStation(value) {
   if (direct) return direct;
   const result = await searchStation(value);
   const stations = result?.data?.stations || result?.stations || [];
-  if (Array.isArray(stations) && stations.length > 0) {
-    return stations[0]?.code || stations[0]?.stationCode || null;
-  }
+  if (Array.isArray(stations) && stations.length > 0) return stations[0]?.code || stations[0]?.stationCode || null;
   return null;
 }
 
 async function getTrainsBetween(from, to, date, live = false) {
-  return await railRadarGet(`/v1/trains/between/${encodeURIComponent(from)}/${encodeURIComponent(to)}`, {
-    date, live: live ? "true" : "false"
-  });
+  return await railRadarGet(`/v1/trains/between/${encodeURIComponent(from)}/${encodeURIComponent(to)}`, { date, live: live ? "true" : "false" });
 }
 
 function formatBetweenResult(result, date, afterHour = null) {
@@ -418,7 +380,7 @@ async function generateAIReply(userMessage) {
   
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-3.5-flash-lite", // or gemini-1.5-flash
+      model: "gemini-3.5-flash-lite",
       contents: prompt,
       config: { maxOutputTokens: 300 }
     });
@@ -459,23 +421,25 @@ async function processUserMessage(userMessage) {
     catch (error) { return `❌ ${trainNumber} ট্রেনের live status পাওয়া যাচ্ছে না।`; }
   }
 
-  // 3. Between Stations Route Match
-  const from = findStationCode(userMessage);
+  // 3. Between Stations Route Match (Direction Fixed)
+  let from = null;
   let to = null;
-  const routePatterns = [/থেকে\s+(.+?)(?:\s+যাওয়ার|\s+যেতে|\s+ট্রেন|\s*$)/i, /থেকে\s+(.+?)\s+যাও/i, /from\s+(.+?)\s+to\s+(.+)/i];
-  
-  for (const pattern of routePatterns) {
-    const match = userMessage.match(pattern);
-    if (match) {
-      to = pattern.toString().includes("from") ? findStationCode(match[2]) : findStationCode(match[1]);
-      if (to) break;
+
+  const bMatch = userMessage.match(/(.+?)\s+থেকে\s+(.+)/);
+  if (bMatch) {
+    from = findStationCode(bMatch[1]);
+    to = findStationCode(bMatch[2]);
+  } else {
+    const eMatch = userMessage.match(/(.+?)\s+to\s+(.+)/i);
+    if (eMatch) {
+      from = findStationCode(eMatch[1]);
+      to = findStationCode(eMatch[2]);
     }
   }
 
-  if (normalized.includes("শান্তিপুর") && (normalized.includes("শিয়ালদা") || normalized.includes("sealdah"))) {
-    return await handleBetween("STB", "SDAH", userMessage);
+  if (from && to && from !== to) {
+    return await handleBetween(from, to, userMessage);
   }
-  if (from && to) return await handleBetween(from, to, userMessage);
 
   // 4. Just Train Number
   if (trainNumber && (normalized.includes("train") || normalized.includes("ট্রেন") || normalized.includes("সময়"))) {
@@ -499,7 +463,7 @@ async function sendWhatsAppMessage(to, text) {
     }, {
       headers: { Authorization: `Bearer ${WHATSAPP_TOKEN}`, "Content-Type": "application/json" }
     });
-    console.log("WhatsApp message sent successfully");
+    console.log("WhatsApp message sent successfully to", to);
   } catch (error) {
     console.error("WhatsApp Send Error:", error.response?.data || error.message);
   }
@@ -520,8 +484,7 @@ app.get("/webhook", (req, res) => {
 });
 
 app.post("/webhook", async (req, res) => {
-  res.sendStatus(200); // Always respond 200 to WhatsApp immediately
-  
+  res.sendStatus(200); 
   try {
     const entry = req.body?.entry?.[0];
     const message = entry?.changes?.[0]?.value?.messages?.[0];
@@ -530,7 +493,6 @@ app.post("/webhook", async (req, res) => {
     const from = message.from;
     let reply = "";
 
-    // If User Sends Location (GPS Tracking)
     if (message.type === "location") {
       const lat = message.location.latitude;
       const lon = message.location.longitude;
@@ -542,12 +504,10 @@ app.post("/webhook", async (req, res) => {
         reply = "দুঃখিত, আপনার কাছাকাছি কোনো স্টেশনের তথ্য আমাদের ডেটাবেসে নেই।";
       }
     } 
-    // If User Sends Text (NLP & Command processing)
     else if (message.type === "text") {
       const userMessage = message.text?.body?.trim();
       if (userMessage) reply = await processUserMessage(userMessage);
     } 
-    // Fallback for Images/Audio/Documents
     else {
       reply = "দুঃখিত, আমি শুধুমাত্র Text Message এবং Current Location 📍 গ্রহণ করতে পারি।";
     }
@@ -560,12 +520,272 @@ app.post("/webhook", async (req, res) => {
 });
 
 /* =========================================================
-   FRONTEND & API ROUTES
+   FRONTEND - PROFESSIONAL WEB UI
 ========================================================= */
 app.get("/", (req, res) => {
-  res.send(`<h2>🚆 Sealdah Train Service Bot Running!</h2><p>Server is Active.</p>`);
+  res.send(`
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Sealdah Train Tracker | Pro Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+  :root {
+    --bg-main: #0a0e17;
+    --bg-card: rgba(20, 26, 40, 0.7);
+    --border-color: rgba(255, 255, 255, 0.1);
+    --primary: #3b82f6;
+    --primary-hover: #2563eb;
+    --text-main: #ffffff;
+    --text-muted: #9ca3af;
+    --accent-green: #10b981;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 0;
+    font-family: 'Inter', sans-serif;
+    background: radial-gradient(circle at top right, #111827, var(--bg-main));
+    color: var(--text-main);
+    min-height: 100vh;
+  }
+  .container {
+    max-width: 800px; margin: 0 auto; padding: 40px 20px;
+  }
+  .header {
+    text-align: center; margin-bottom: 40px;
+  }
+  .header h1 {
+    font-size: 2.2rem; margin: 0 0 10px; font-weight: 700;
+    background: linear-gradient(to right, #60a5fa, #a78bfa);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .header p { color: var(--text-muted); font-size: 1rem; margin: 0; }
+  
+  .status-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.2);
+    color: var(--accent-green); padding: 6px 12px; border-radius: 20px;
+    font-size: 0.85rem; font-weight: 500; margin-top: 15px;
+  }
+  .status-badge .dot { width: 8px; height: 8px; background: var(--accent-green); border-radius: 50%; box-shadow: 0 0 8px var(--accent-green); }
+
+  .tabs {
+    display: flex; gap: 10px; margin-bottom: 25px;
+    background: rgba(0,0,0,0.3); padding: 8px; border-radius: 14px;
+    overflow-x: auto;
+  }
+  .tabs button {
+    flex: 1; min-width: 120px; padding: 12px; border: none; border-radius: 10px;
+    background: transparent; color: var(--text-muted); font-weight: 600; font-size: 0.95rem;
+    cursor: pointer; transition: all 0.3s ease;
+  }
+  .tabs button:hover { color: var(--text-main); }
+  .tabs button.active { background: var(--bg-card); color: var(--text-main); box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+
+  .glass-card {
+    background: var(--bg-card); backdrop-filter: blur(16px);
+    border: 1px solid var(--border-color); border-radius: 20px;
+    padding: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    display: none; animation: fadeIn 0.4s ease forwards;
+  }
+  .glass-card.active { display: block; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+  .glass-card h2 { margin-top: 0; font-size: 1.4rem; font-weight: 600; border-bottom: 1px solid var(--border-color); padding-bottom: 15px; margin-bottom: 20px; }
+  
+  .input-group { margin-bottom: 15px; }
+  input {
+    width: 100%; padding: 14px 16px; border-radius: 12px; border: 1px solid var(--border-color);
+    background: rgba(0,0,0,0.2); color: white; font-size: 1rem; font-family: 'Inter', sans-serif;
+    transition: all 0.3s;
+  }
+  input:focus { outline: none; border-color: var(--primary); background: rgba(0,0,0,0.4); box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2); }
+  
+  .btn-primary {
+    width: 100%; padding: 14px; border: none; border-radius: 12px;
+    background: var(--primary); color: white; font-size: 1.05rem; font-weight: 600;
+    cursor: pointer; transition: all 0.3s;
+  }
+  .btn-primary:hover { background: var(--primary-hover); transform: translateY(-2px); box-shadow: 0 8px 20px rgba(59, 130, 246, 0.3); }
+
+  .result-box {
+    margin-top: 20px; background: rgba(0,0,0,0.4); border-radius: 12px;
+    padding: 20px; white-space: pre-wrap; line-height: 1.6; font-size: 0.95rem;
+    border: 1px solid var(--border-color);
+  }
+  .loading { display: none; text-align: center; color: var(--primary); font-weight: 600; margin: 20px 0; }
+
+  #map { height: 400px; border-radius: 12px; border: 1px solid var(--border-color); margin-top: 20px; z-index: 1; }
+  
+  .footer { text-align: center; color: var(--text-muted); margin-top: 50px; font-size: 0.85rem; }
+  .footer a { color: var(--primary); text-decoration: none; }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="header">
+    <h1>🚆 Sealdah Transit Hub</h1>
+    <p>Live Railway Intelligence Dashboard</p>
+    <div class="status-badge"><div class="dot"></div> Server Online & Bot Active</div>
+  </div>
+
+  <div class="tabs">
+    <button class="active" onclick="switchTab('tab-live', this)">Live Status</button>
+    <button onclick="switchTab('tab-route', this)">Between Stations</button>
+    <button onclick="switchTab('tab-pnr', this)">PNR Check</button>
+    <button onclick="switchTab('tab-map', this)">Live Map</button>
+  </div>
+
+  <!-- Live Status Tab -->
+  <div id="tab-live" class="glass-card active">
+    <h2>📡 Live Train Status</h2>
+    <div class="input-group">
+      <input id="live-input" type="text" placeholder="Enter Train Number (e.g. 31530)" maxlength="5">
+    </div>
+    <button class="btn-primary" onclick="fetchData('live-input', '/api/live-status?train=', 'live-result', 'live-load')">Check Status</button>
+    <div id="live-load" class="loading">Fetching live data...</div>
+    <div id="live-result" class="result-box">Train results will appear here.</div>
+  </div>
+
+  <!-- Route Tab -->
+  <div id="tab-route" class="glass-card">
+    <h2>🗺️ Find Trains Between Stations</h2>
+    <div class="input-group"><input id="route-from" type="text" placeholder="From Station (e.g. Shantipur)"></div>
+    <div class="input-group"><input id="route-to" type="text" placeholder="To Station (e.g. Sealdah)"></div>
+    <div class="input-group"><input id="route-date" type="date"></div>
+    <button class="btn-primary" onclick="fetchRoute()">Search Trains</button>
+    <div id="route-load" class="loading">Searching routes...</div>
+    <div id="route-result" class="result-box">Schedule will appear here.</div>
+  </div>
+
+  <!-- PNR Tab -->
+  <div id="tab-pnr" class="glass-card">
+    <h2>🎫 PNR Status Check</h2>
+    <div class="input-group">
+      <input id="pnr-input" type="text" placeholder="Enter 10-digit PNR" maxlength="10">
+    </div>
+    <button class="btn-primary" onclick="fetchData('pnr-input', '/api/pnr?pnr=', 'pnr-result', 'pnr-load')">Check PNR</button>
+    <div id="pnr-load" class="loading">Verifying PNR...</div>
+    <div id="pnr-result" class="result-box">PNR details will appear here.</div>
+  </div>
+
+  <!-- Map Tab -->
+  <div id="tab-map" class="glass-card">
+    <h2>🌍 Live GPS Map</h2>
+    <div class="input-group">
+      <input id="map-input" type="text" placeholder="Enter Train Number" maxlength="5">
+    </div>
+    <button class="btn-primary" onclick="loadMap()">View on Map</button>
+    <div id="map-load" class="loading">Locating train on map...</div>
+    <div id="map"></div>
+    <div id="map-result" class="result-box" style="margin-top: 15px; display: none;"></div>
+  </div>
+
+  <div class="footer">
+    Powered by <b>Node.js</b>, <b>Gemini AI</b> & <b>RailRadar</b>.
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+  // Set Date automatically
+  document.getElementById("route-date").value = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+
+  function switchTab(tabId, btn) {
+    document.querySelectorAll('.glass-card').forEach(c => c.classList.remove('active'));
+    document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
+    document.getElementById(tabId).classList.add('active');
+    btn.classList.add('active');
+  }
+
+  async function fetchData(inputId, endpoint, resultId, loadId) {
+    const val = document.getElementById(inputId).value.trim();
+    const resBox = document.getElementById(resultId);
+    const loadBox = document.getElementById(loadId);
+    if(!val) { resBox.textContent = "Please enter a valid input."; return; }
+    
+    resBox.style.display = 'none'; loadBox.style.display = 'block';
+    try {
+      const res = await fetch(endpoint + encodeURIComponent(val));
+      const data = await res.json();
+      resBox.textContent = data.message || JSON.stringify(data, null, 2);
+    } catch(err) {
+      resBox.textContent = "Error fetching data. Please try again.";
+    }
+    loadBox.style.display = 'none'; resBox.style.display = 'block';
+  }
+
+  async function fetchRoute() {
+    const from = document.getElementById('route-from').value.trim();
+    const to = document.getElementById('route-to').value.trim();
+    const date = document.getElementById('route-date').value;
+    const resBox = document.getElementById('route-result');
+    const loadBox = document.getElementById('route-load');
+
+    if(!from || !to) { resBox.textContent = "Please enter both stations."; return; }
+    resBox.style.display = 'none'; loadBox.style.display = 'block';
+
+    try {
+      const url = \`/api/between?from=\${encodeURIComponent(from)}&to=\${encodeURIComponent(to)}&date=\${date}\`;
+      const res = await fetch(url);
+      const data = await res.json();
+      resBox.textContent = data.message || JSON.stringify(data, null, 2);
+    } catch(err) { resBox.textContent = "Error fetching schedule."; }
+    loadBox.style.display = 'none'; resBox.style.display = 'block';
+  }
+
+  let map = null;
+  async function loadMap() {
+    const train = document.getElementById("map-input").value.trim();
+    const resBox = document.getElementById("map-result");
+    const loadBox = document.getElementById("map-load");
+    if(!train) return;
+
+    loadBox.style.display = 'block'; resBox.style.display = 'none';
+    try {
+      const response = await fetch("/api/map?train=" + encodeURIComponent(train));
+      const data = await response.json();
+      if(data.error) { resBox.textContent = data.error; resBox.style.display = 'block'; loadBox.style.display = 'none'; return; }
+
+      if(!map) {
+        map = L.map("map").setView([22.57, 88.36], 8);
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
+      }
+      map.eachLayer(layer => { if(layer instanceof L.Marker || layer instanceof L.GeoJSON) map.removeLayer(layer); });
+
+      if(data.geojson) {
+        const route = L.geoJSON(data.geojson, { style: { color: '#3b82f6', weight: 4 } }).addTo(map);
+        map.fitBounds(route.getBounds());
+      }
+      
+      const currentCode = data.currentLocation?.stationCode;
+      let currentStop = data.stops?.find(s => s.code === currentCode);
+      
+      if(currentStop) {
+        L.marker([currentStop.lat, currentStop.lng]).addTo(map)
+         .bindPopup("🚆 <b>" + data.trainNumber + "</b><br>📍 " + currentStop.name).openPopup();
+      }
+
+      resBox.innerHTML = \`<b>Status:</b> \${data.status || "-"} <br><b>Delay:</b> \${data.delayMinutes ?? 0} mins\`;
+      resBox.style.display = 'block';
+    } catch(error) {
+      resBox.textContent = "Live map unavailable."; resBox.style.display = 'block';
+    }
+    loadBox.style.display = 'none';
+  }
+</script>
+</body>
+</html>
+  `);
 });
 
+/* =========================================================
+   API ROUTES
+========================================================= */
 app.get("/api/live-status", async (req, res) => {
   const train = req.query.train?.replace(/\D/g, "");
   if (!/^\d{5}$/.test(train)) return res.status(400).json({ error: true, message: "Invalid Train Number" });
@@ -580,12 +800,35 @@ app.get("/api/pnr", async (req, res) => {
   catch (error) { res.status(500).json({ error: true }); }
 });
 
+app.get("/api/between", async (req, res) => {
+  const fromInput = req.query.from || "";
+  const toInput = req.query.to || "";
+  const date = req.query.date || getISTDate();
+  try {
+    const from = await resolveStation(fromInput);
+    const to = await resolveStation(toInput);
+    if (!from || !to) return res.status(400).json({ error: true, message: "Station not found. Use correct name." });
+    
+    const result = await getTrainsBetween(from, to, date, date === getISTDate());
+    res.json({ success: true, message: formatBetweenResult(result, date, null) });
+  } catch (error) { res.status(500).json({ error: true, message: "Data unavailable." }); }
+});
+
+app.get("/api/map", async (req, res) => {
+  const train = req.query.train?.replace(/\D/g, "");
+  if (!/^\d{5}$/.test(train)) return res.status(400).json({ error: "Invalid Train Number" });
+  try {
+    const [live, route] = await Promise.all([getLiveTrain(train), getTrainRoute(train)]);
+    res.json(buildMapData(live, route));
+  } catch (error) { res.status(500).json({ error: "Map data unavailable" }); }
+});
+
 /* =========================================================
    START SERVER
 ========================================================= */
 app.listen(PORT, () => {
-  console.log("================================");
-  console.log("🚆 Sealdah Train Bot Running!");
-  console.log(`Port: ${PORT}`);
-  console.log("================================");
+  console.log("==========================================");
+  console.log("🚆 SEALDAH TRAIN BOT IS LIVE!");
+  console.log(`📡 Port: ${PORT}`);
+  console.log("==========================================");
 });
