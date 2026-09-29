@@ -17,6 +17,9 @@ const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const RAILRADAR_API_KEY = process.env.RAILRADAR_API_KEY;
 const RAILRADAR_BASE = "https://api.railradar.in";
 
+// আপনার বটের ফোন নম্বর (Deep Link এর জন্য)। 91 সহ লিখবেন।
+const BOT_PHONE = process.env.BOT_PHONE || "917003089284";
+
 const ai = GEMINI_API_KEY ? new GoogleGenAI({ apiKey: GEMINI_API_KEY }) : null;
 
 /* =========================================================
@@ -66,12 +69,10 @@ function formatTime(time) {
 }
 
 /* =========================================================
-   ULTIMATE DEEP SEARCH ALGORITHM (FINAL FIX FOR PNR)
+   ULTIMATE DEEP SEARCH ALGORITHM (PNR FIX)
 ========================================================= */
 function deepSearch(obj, keys) {
   if (!obj || typeof obj !== 'object') return null;
-
-  // 1. Check direct keys first
   for (let k of keys) {
     if (obj.hasOwnProperty(k)) {
       let val = obj[k];
@@ -90,15 +91,12 @@ function deepSearch(obj, keys) {
       }
     }
   }
-
-  // 2. Recursively check nested objects
   for (let k in obj) {
     if (obj[k] !== null && typeof obj[k] === 'object' && !Array.isArray(obj[k])) {
       let res = deepSearch(obj[k], keys);
       if (res) return res;
     }
   }
-
   return null;
 }
 
@@ -138,19 +136,88 @@ function findPassengersArray(obj) {
 }
 
 /* =========================================================
-   STATION ALIASES (For Text Search)
+   MASSIVE STATION DICTIONARY (SEALDAH DIVISION FULL)
 ========================================================= */
 const STATIONS = {
-  "শান্তিপুর": "STB", "shantipur": "STB", "stb": "STB",
-  "শিয়ালদা": "SDAH", "শিয়ালদা": "SDAH", "শিয়ালদহ": "SDAH", "sealdah": "SDAH", "sdah": "SDAH",
-  "রানাঘাট": "RHA", "ranaghat": "RHA", "rha": "RHA",
-  "কৃষ্ণনগর": "KNJ", "krishnanagar": "KNJ", "knj": "KNJ",
-  "কল্যাণী": "KLYM", "kalyani": "KLYM",
-  "নৈহাটি": "NH", "naihati": "NH", "nh": "NH",
-  "বনগাঁ": "BNJ", "bongaon": "BNJ", "bnj": "BNJ",
-  "বারাসত": "BT", "barasat": "BT",
-  "দমদম": "DDJ", "dum dum": "DDJ", "ddj": "DDJ",
-  "কলকাতা": "KOAA", "kolkata": "KOAA"
+  // Main Line & Lalgola
+  "শিয়ালদা": "SDAH", "sealdah": "SDAH", "sdah": "SDAH",
+  "বিধাননগর": "BNXR", "bidhannagar": "BNXR",
+  "দমদম": "DDJ", "dumdum": "DDJ", "ddj": "DDJ",
+  "বেলঘড়িয়া": "BLH", "বেলঘড়িয়া": "BLH", "belgharia": "BLH",
+  "আগরপাড়া": "AGP", "agarpara": "AGP",
+  "সোদপুর": "SEP", "sodepur": "SEP",
+  "খড়দহ": "KDH", "khardaha": "KDH",
+  "টিটাগড়": "TGH", "titagarh": "TGH",
+  "ব্যারাকপুর": "BP", "barrackpore": "BP",
+  "পলতা": "PTF", "palta": "PTF",
+  "ইছাপুর": "IP", "ichhapur": "IP",
+  "শ্যামনগর": "SNR", "shyamnagar": "SNR",
+  "জগদ্দল": "JGDL", "jagaddal": "JGDL",
+  "কাঁকিনাড়া": "KNR", "kankinara": "KNR",
+  "নৈহাটি": "NH", "naihati": "NH",
+  "হালিশহর": "HLR", "halisahar": "HLR",
+  "কাঁচরাপাড়া": "KPA", "kanchrapara": "KPA",
+  "কল্যাণী": "KYI", "kalyani": "KYI",
+  "মদনপুর": "MPJ", "madanpur": "MPJ",
+  "শিমুরালি": "SMX", "simurali": "SMX",
+  "পালপাড়া": "PXR", "পালপাড়া": "PXR", "palpara": "PXR",
+  "চাকদহ": "CDH", "chakdaha": "CDH",
+  "পায়রাডাঙ্গা": "PDX", "পায়রাডাঙ্গা": "PDX", "payradanga": "PDX",
+  "রানাঘাট": "RHA", "ranaghat": "RHA",
+  "কালিনারায়ণপুর": "KLNP", "kalinarayanpur": "KLNP",
+  "হবিবপুর": "HBE", "habibpur": "HBE",
+  "ফুলিয়া": "FLU", "phulia": "FLU", "fulia": "FLU",
+  "শান্তিপুর": "STB", "shantipur": "STB",
+  "বাদকুল্লা": "BDZ", "badkulla": "BDZ",
+  "কৃষ্ণনগর": "KNJ", "krishnanagar": "KNJ",
+  "বেথুয়াডহরি": "BTY", "bethuadahari": "BTY",
+  "বেলডাঙ্গা": "BEB", "beldanga": "BEB",
+  "বহরমপুর": "BPC", "berhampore": "BPC",
+  "মুর্শিদাবাদ": "MBB", "murshidabad": "MBB",
+  "লালগোলা": "LGL", "lalgola": "LGL",
+
+  // Bongaon Line & Hasnabad
+  "দমদম ক্যান্টনমেন্ট": "DDC", "dum dum cantt": "DDC",
+  "বিরাটি": "BBT", "birati": "BBT",
+  "নিউ ব্যারাকপুর": "NBE", "new barrackpore": "NBE",
+  "মধ্যমগ্রাম": "MMG", "madhyamgram": "MMG",
+  "হৃদয়পুর": "HHR", "hridaypur": "HHR",
+  "বারাসত": "BT", "বারাসাত": "BT", "barasat": "BT",
+  "বামনগাছি": "BMG", "bamangachhi": "BMG",
+  "দত্তপুকুর": "DTK", "dattapukur": "DTK",
+  "অশোকনগর": "ASKR", "ashoknagar": "ASKR",
+  "হাবরা": "HB", "habra": "HB",
+  "মছলন্দপুর": "MSL", "machhalandapur": "MSL",
+  "গোবরডাঙ্গা": "GBG", "gobardanga": "GBG",
+  "ঠাকুরনগর": "TKNR", "thakurnagar": "TKNR",
+  "চাঁদপাড়া": "CDP", "chandpara": "CDP",
+  "বনগাঁ": "BNJ", "bongaon": "BNJ",
+  "বসিরহাট": "BSHT", "basirhat": "BSHT",
+  "হাসনাবাদ": "HNB", "hasnabad": "HNB",
+
+  // South Line (Namkhana, Diamond Harbour, Canning)
+  "পার্ক সার্কাস": "PQS", "park circus": "PQS",
+  "বালিগঞ্জ": "BLN", "ballygunge": "BLN",
+  "ঢাকুরিয়া": "DHK", "dhakuria": "DHK",
+  "যাদবপুর": "JDP", "jadavpur": "JDP",
+  "বাঘাযতীন": "BGJT", "baghajatin": "BGJT",
+  "নিউ গড়িয়া": "NGRI", "new garia": "NGRI",
+  "গড়িয়া": "GIA", "garia": "GIA",
+  "নরেন্দ্রপুর": "NRPR", "narendrapur": "NRPR",
+  "সোনারপুর": "SPR", "sonarpur": "SPR",
+  "সুভাষ গ্রাম": "MAK", "subhas gram": "MAK",
+  "বারুইপুর": "BRP", "baruipur": "BRP",
+  "ডায়মন্ড হারবার": "DH", "diamond harbour": "DH",
+  "জয়নগর": "JNM", "jaynagar": "JNM", "majilpur": "JNM",
+  "কাকদ্বীপ": "KWDP", "kakdwip": "KWDP",
+  "নামখানা": "NMKA", "namkhana": "NMKA",
+  "ক্যানিং": "CG", "canning": "CG",
+  "মাজেরহাট": "MJT", "majerhat": "MJT",
+  "বজবজ": "BGB", "budge budge": "BGB",
+
+  // Extra Cities
+  "কলকাতা": "KOAA", "kolkata": "KOAA",
+  "হাওড়া": "HWH", "howrah": "HWH"
 };
 
 function findStationCode(text) {
@@ -287,7 +354,7 @@ function detectTrainNumber(text) {
 }
 
 /* =========================================================
-   RAILRADAR API & FORMATTING
+   RAILRADAR API
 ========================================================= */
 async function railRadarGet(path, params = {}) {
   if (!RAILRADAR_API_KEY) throw new Error("RAILRADAR_API_KEY is missing");
@@ -317,25 +384,38 @@ async function getTrainsBetween(from, to, date, live = false) {
   return await railRadarGet(`/v1/trains/between/${encodeURIComponent(from)}/${encodeURIComponent(to)}`, { date, live: live ? "true" : "false" });
 }
 
-function formatBetweenResult(result, date, afterHour = null) {
+/* =========================================================
+   TIME FILTERING & CLICKABLE LINKS
+========================================================= */
+function formatBetweenResult(result, date, afterHour = null, isToday = false) {
   const data = result?.data || result;
   const trains = Array.isArray(data?.trains) ? data.trains : [];
   if (trains.length === 0) return `🚆 ${formatDateDDMMYYYY(date)} তারিখে এই রুটে কোনো ট্রেন পাওয়া যায়নি।`;
 
-  let filtered = trains;
+  let minimum = 0;
+  
   if (afterHour !== null) {
-    const minimum = afterHour * 60;
-    filtered = trains.filter(train => {
-      const departure = train?.from?.departure || train?.departure || null;
-      const minutes = timeToMinutes(departure);
-      return minutes !== null && minutes >= minimum;
-    });
+    minimum = afterHour * 60;
+  } else if (isToday) {
+    const now = new Date();
+    const currentIST = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
+    minimum = currentIST.getHours() * 60 + currentIST.getMinutes();
   }
-  if (filtered.length === 0) return `🚆 ${formatDateDDMMYYYY(date)} তারিখে ${afterHour}:00-এর পর এই রুটে কোনো ট্রেন পাওয়া যায়নি।`;
+
+  let filtered = trains.filter(train => {
+    const departure = train?.from?.departure || train?.departure || null;
+    const minutes = timeToMinutes(departure);
+    return minutes !== null && minutes >= minimum;
+  });
+
+  if (filtered.length === 0) return `🚆 আজকের জন্য আর কোনো ট্রেন উপলব্ধ নেই। (সব ট্রেন চলে গেছে)`;
+
+  filtered = filtered.slice(0, 7);
 
   const fromName = data?.from?.name || data?.from?.code || "";
   const toName = data?.to?.name || data?.to?.code || "";
-  let reply = `🚆 ${fromName} → ${toName}\n📅 ${formatDateDDMMYYYY(date)}\n\n`;
+  
+  let reply = `🚆 *${fromName} ➡ ${toName}*\n📅 ${formatDateDDMMYYYY(date)}\n\n`;
 
   filtered.forEach((item, index) => {
     const train = item?.train || {};
@@ -343,12 +423,16 @@ function formatBetweenResult(result, date, afterHour = null) {
     const arrival = item?.to?.arrival || item?.arrival || "-";
     const delay = item?.live?.delayMinutes;
     const platform = item?.live?.platform;
+    const tNum = train.number || "-";
 
-    reply += `${index + 1}. 🚆 ${train.number || "-"} ${train.name || ""}\n   ছাড়বে: ${formatTime(departure)}\n   পৌঁছাবে: ${formatTime(arrival)}`;
-    if (delay !== undefined && delay !== null) reply += `\n   ⏱️ বিলম্ব: ${delay} মিনিট`;
-    if (platform) reply += `\n   🚉 প্ল্যাটফর্ম: ${platform}`;
-    reply += "\n\n";
+    reply += `*${index + 1}. 🚆 ${tNum} ${train.name || ""}*\n`;
+    reply += `   ⏰ ছাড়বে: ${formatTime(departure)} | পৌঁছাবে: ${formatTime(arrival)}\n`;
+    if (delay !== undefined && delay !== null && delay > 0) reply += `   ⏱️ বিলম্ব: ${delay} মিনিট\n`;
+    if (platform) reply += `   🚉 প্ল্যাটফর্ম: ${platform}\n`;
+    
+    reply += `   📍 লাইভ: https://wa.me/${BOT_PHONE}?text=Live+${tNum}\n\n`;
   });
+  
   return reply.trim();
 }
 
@@ -366,8 +450,8 @@ function formatLiveStatus(result) {
   const previous = data.previousHalt || {};
   const delay = data.delayMinutes;
 
-  let reply = `🚆 ${data.trainNumber || train.number || "-"} ${train.name || ""}\n\n📍 Status: ${data.status || "অজানা"}\n`;
-  if (delay !== undefined && delay !== null) reply += `⏱️ Delay: ${delay} মিনিট\n`;
+  let reply = `🚆 *${data.trainNumber || train.number || "-"} ${train.name || ""}*\n\n📍 *Status:* ${data.status || "অজানা"}\n`;
+  if (delay !== undefined && delay !== null && delay > 0) reply += `⏱️ *Delay:* ${delay} মিনিট\n`;
   if (current.stationCode) reply += `📍 বর্তমান স্টেশন: ${current.stationCode}\n`;
   if (current.status) reply += `🚉 বর্তমান অবস্থা: ${current.status}\n`;
   if (next.stationName || next.stationCode) reply += `➡️ পরবর্তী স্টেশন: ${next.stationName || next.stationCode}\n`;
@@ -382,7 +466,7 @@ async function getPNR(pnr) {
 }
 
 /* =========================================================
-   PNR FORMATTER (100% FIXED USING DEEP SEARCH)
+   PNR FORMATTER
 ========================================================= */
 function formatPNR(result, pnr) {
   let data = result?.data || result || {};
@@ -402,7 +486,7 @@ function formatPNR(result, pnr) {
   let trainClass = findData(data, ['journeyClass', 'class', 'trainClass', 'bookingClass', 'quota']);
   let chartStatus = findData(data, ['chartStatus', 'chartingStatus', 'chartPrepared', 'chart']);
 
-  if (tNumber === tName) tName = "-"; // Remove duplicate if API sends same string for both
+  if (tNumber === tName) tName = ""; 
 
   let reply = `🎫 *PNR Status*\n━━━━━━━━━━━━━━\n📌 *PNR:* ${pnr}\n`;
   
@@ -422,7 +506,6 @@ function formatPNR(result, pnr) {
       let bStatus = findData(p, ['bookingStatus', 'bookingStatusText', 'bookingStatusIndex', 'bkgStatus', 'booking']);
       let cStatus = findData(p, ['currentStatus', 'currentStatusText', 'currentStatusIndex', 'curStatus']);
       
-      // Fallback for generic 'status' key
       if (bStatus === "-") bStatus = findData(p, ['status']);
       if (cStatus === "-") cStatus = findData(p, ['status']);
       
@@ -432,7 +515,6 @@ function formatPNR(result, pnr) {
       
       let passengerInfo = `বুকিং: ${bStatus} | বর্তমান: ${cStatus}`;
       
-      // Append Coach & Seat if found
       if (coach !== "-" || berth !== "-") {
          let seatText = [];
          if (coach !== "-") seatText.push(`কোচ: ${coach}`);
@@ -470,11 +552,20 @@ function buildMapData(liveResult, routeResult) {
 }
 
 /* =========================================================
-   GEMINI AI & BOT PROCESSOR
+   GEMINI AI & BOT PROCESSOR (GREETING UPDATED)
 ========================================================= */
+const DEFAULT_WELCOME_MSG = "নমস্কার! 🚆 Sealdah Train Bot-এ আপনাকে স্বাগতম।\n\n⚠️ *বিশেষ দ্রষ্টব্য:* ট্রেন সার্চের এই ফিচারটি শুধুমাত্র শিয়ালদা ডিভিশনের লোকাল (Suburban) ট্রেনের জন্য প্রযোজ্য, কোনো মেল বা এক্সপ্রেস ট্রেনের জন্য নয়।\n\nট্রেনের তথ্যের জন্য লিখুন: শান্তিপুর থেকে শিয়ালদা, Live 31530 বা PNR 1234567890";
+
 async function generateAIReply(userMessage) {
-  if (!ai) return "নমস্কার! 🚆 Sealdah Train Bot-এ আপনাকে স্বাগতম। ট্রেনের তথ্যের জন্য লিখুন: শান্তিপুর থেকে শিয়ালদা, Live 31530 বা PNR 1234567890";
-  const prompt = `তুমি Sealdah Train Service WhatsApp Assistant। ব্যবহারকারী বাংলায় লিখলে বাংলায়, ইংরেজিতে লিখলে ইংরেজিতে উত্তর দেবে। উত্তর ছোট ও WhatsApp-friendly রাখবে। নিজে থেকে train timing বা status বানাবে না। User message: ${userMessage}`;
+  if (!ai) return DEFAULT_WELCOME_MSG;
+  
+  const prompt = `তুমি Sealdah Train Service WhatsApp Assistant। 
+  ব্যবহারকারী বাংলায় লিখলে বাংলায়, ইংরেজিতে লিখলে ইংরেজিতে উত্তর দেবে। উত্তর ছোট ও WhatsApp-friendly রাখবে। নিজে থেকে train timing বা status বানাবে না। 
+  
+  **জরুরি নির্দেশ:** যদি কেউ তোমাকে "Hi", "Hello", "Help" বা কোনো সাধারণ অভিবাদন পাঠায়, তবে তোমার উত্তরে অবশ্যই এই লাইনটি যুক্ত করবে: 
+  "⚠️ *বিশেষ দ্রষ্টব্য:* ট্রেন সার্চের এই ফিচারটি শুধুমাত্র শিয়ালদা ডিভিশনের লোকাল (Suburban) ট্রেনের জন্য প্রযোজ্য, কোনো মেল বা এক্সপ্রেস ট্রেনের জন্য নয়।"
+  
+  User message: ${userMessage}`;
   
   try {
     const response = await ai.models.generateContent({
@@ -487,7 +578,7 @@ async function generateAIReply(userMessage) {
   } catch (error) {
     console.error("Gemini Error:", error?.message);
   }
-  return "নমস্কার! 🚆 আপনি কী জানতে চান লিখুন। (যেমন: Live 31530, PNR 1234567890)";
+  return DEFAULT_WELCOME_MSG;
 }
 
 async function handleBetween(from, to, userMessage) {
@@ -496,7 +587,7 @@ async function handleBetween(from, to, userMessage) {
   const isToday = date === getISTDate();
   try {
     const result = await getTrainsBetween(from, to, date, isToday);
-    return formatBetweenResult(result, date, afterHour);
+    return formatBetweenResult(result, date, afterHour, isToday);
   } catch (error) {
     return "❌ Railway data পাওয়া যাচ্ছে না। কিছুক্ষণ পরে আবার চেষ্টা করুন।";
   }
@@ -523,16 +614,15 @@ async function processUserMessage(userMessage) {
   let from = null;
   let to = null;
 
-  const bMatch = userMessage.match(/(.+?)\s+থেকে\s+(.+)/);
+  let bMatch = userMessage.match(/(.+?)\s+থেকে\s+(.+)/);
+  if (!bMatch) bMatch = userMessage.match(/(.+?)\s+to\s+(.+)/i);
+
   if (bMatch) {
-    from = findStationCode(bMatch[1]);
-    to = findStationCode(bMatch[2]);
-  } else {
-    const eMatch = userMessage.match(/(.+?)\s+to\s+(.+)/i);
-    if (eMatch) {
-      from = findStationCode(eMatch[1]);
-      to = findStationCode(eMatch[2]);
-    }
+    let rawFrom = bMatch[1].replace(/(যাব|যাওয়ার|যেতে|ট্রেন|কখন|train|going)/gi, "").trim();
+    let rawTo = bMatch[2].replace(/(যাব|যাওয়ার|যেতে|ট্রেন|কখন|আছে|কি|train|going)/gi, "").trim();
+    
+    from = await resolveStation(rawFrom);
+    to = await resolveStation(rawTo);
   }
 
   if (from && to && from !== to) {
@@ -554,7 +644,6 @@ async function processUserMessage(userMessage) {
 ========================================================= */
 async function sendWhatsAppMessage(to, text) {
   try {
-    // Sumanmusix Signature added here
     const finalText = text + "\n\nSumanmusix";
 
     const url = `https://graph.facebook.com/v22.0/${PHONE_NUMBER_ID}/messages`;
@@ -600,7 +689,21 @@ app.post("/webhook", async (req, res) => {
       const nearest = getNearestStation(lat, lon);
       
       if (nearest.station) {
-        reply = `📍 আমরা আপনার লোকেশন ট্র্যাক করেছি।\n\nআপনি বর্তমানে **${nearest.station.name}** স্টেশনের কাছাকাছি আছেন (দূরত্ব: ${nearest.distance} কিমি)।\n\nপরবর্তী ট্রেনের স্ট্যাটাস জানতে লিখুন:\n"Live [ট্রেন নম্বর]"`;
+        reply = `📍 আমরা আপনার লোকেশন ট্র্যাক করেছি।\nআপনি বর্তমানে *${nearest.station.name}* স্টেশনের কাছাকাছি আছেন।\n\n`;
+        
+        if (nearest.station.code !== "SDAH") {
+            reply += `*শিয়ালদাগামী পরবর্তী ট্রেনসমূহ:* ⏳\n\n`;
+            try {
+                const date = getISTDate();
+                const result = await getTrainsBetween(nearest.station.code, "SDAH", date, true);
+                reply += formatBetweenResult(result, date, null, true);
+            } catch(e) {
+                reply += `কোথায় যেতে চান লিখে পাঠান (যেমন: ${nearest.station.name} থেকে শিয়ালদা)`;
+            }
+        } else {
+            reply += `কোথায় যেতে চান লিখে পাঠান (যেমন: শিয়ালদা থেকে রানাঘাট)`;
+        }
+
       } else {
         reply = "দুঃখিত, আপনার কাছাকাছি কোনো স্টেশনের তথ্য আমাদের ডেটাবেসে নেই।";
       }
@@ -643,6 +746,7 @@ app.get("/", (req, res) => {
     --text-main: #ffffff;
     --text-muted: #9ca3af;
     --accent-green: #10b981;
+    --warning: #fbbf24;
   }
   * { box-sizing: border-box; }
   body {
@@ -652,26 +756,28 @@ app.get("/", (req, res) => {
     color: var(--text-main);
     min-height: 100vh;
   }
-  .container {
-    max-width: 800px; margin: 0 auto; padding: 40px 20px;
-  }
-  .header {
-    text-align: center; margin-bottom: 40px;
-  }
+  .container { max-width: 800px; margin: 0 auto; padding: 40px 20px; }
+  .header { text-align: center; margin-bottom: 25px; }
   .header h1 {
     font-size: 2.2rem; margin: 0 0 10px; font-weight: 700;
     background: linear-gradient(to right, #60a5fa, #a78bfa);
     -webkit-background-clip: text; -webkit-text-fill-color: transparent;
   }
-  .header p { color: var(--text-muted); font-size: 1rem; margin: 0; }
+  .header p { color: var(--text-muted); font-size: 1rem; margin: 0 0 15px 0; }
   
   .status-badge {
     display: inline-flex; align-items: center; gap: 6px;
     background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.2);
     color: var(--accent-green); padding: 6px 12px; border-radius: 20px;
-    font-size: 0.85rem; font-weight: 500; margin-top: 15px;
+    font-size: 0.85rem; font-weight: 500;
   }
   .status-badge .dot { width: 8px; height: 8px; background: var(--accent-green); border-radius: 50%; box-shadow: 0 0 8px var(--accent-green); }
+
+  .notice-banner {
+    background: rgba(251, 191, 36, 0.1); border: 1px solid rgba(251, 191, 36, 0.2);
+    color: var(--warning); padding: 12px 15px; border-radius: 12px;
+    font-size: 0.9rem; text-align: center; margin-bottom: 30px; font-weight: 500;
+  }
 
   .tabs {
     display: flex; gap: 10px; margin-bottom: 25px;
@@ -734,6 +840,10 @@ app.get("/", (req, res) => {
     <div class="status-badge"><div class="dot"></div> Server Online & Bot Active</div>
   </div>
 
+  <div class="notice-banner">
+    ⚠️ <b>বিশেষ দ্রষ্টব্য:</b> ট্রেন সার্চের এই ফিচারটি শুধুমাত্র শিয়ালদা ডিভিশনের লোকাল ট্রেনের জন্য প্রযোজ্য, কোনো মেল বা এক্সপ্রেস ট্রেনের জন্য নয়।
+  </div>
+
   <div class="tabs">
     <button class="active" onclick="switchTab('tab-live', this)">Live Status</button>
     <button onclick="switchTab('tab-route', this)">Between Stations</button>
@@ -793,7 +903,6 @@ app.get("/", (req, res) => {
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-  // Set Date automatically
   document.getElementById("route-date").value = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
 
   function switchTab(tabId, btn) {
@@ -910,8 +1019,9 @@ app.get("/api/between", async (req, res) => {
     const to = await resolveStation(toInput);
     if (!from || !to) return res.status(400).json({ error: true, message: "Station not found. Use correct name." });
     
-    const result = await getTrainsBetween(from, to, date, date === getISTDate());
-    res.json({ success: true, message: formatBetweenResult(result, date, null) });
+    const isToday = date === getISTDate();
+    const result = await getTrainsBetween(from, to, date, isToday);
+    res.json({ success: true, message: formatBetweenResult(result, date, null, isToday) });
   } catch (error) { res.status(500).json({ error: true, message: "Data unavailable." }); }
 });
 
