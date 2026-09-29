@@ -24,11 +24,11 @@ const ai = GEMINI_API_KEY ? new GoogleGenAI({ apiKey: GEMINI_API_KEY }) : null;
 // =========================================================
 // STATE MANAGEMENT (For Premium Dropdown Flow)
 // =========================================================
-const userPrefs = {}; // ভাষা সেভ রাখার জন্য
-const userState = {}; // ড্রপডাউন মেনুর ফ্লো (From -> To) সেভ রাখার জন্য
+const userPrefs = {}; 
+const userState = {}; 
 
 /* =========================================================
-   MULTI-LANGUAGE DICTIONARY (Premium Vibe)
+   MULTI-LANGUAGE DICTIONARY 
 ========================================================= */
 const LANG = {
   en: {
@@ -41,7 +41,7 @@ const LANG = {
     askFrom: "📍 *Departure Station*\nPlease select your starting station from the list below.\n\n_(If your station is not listed, simply type: 'StationA to StationB')_",
     askTo: "🎯 *Destination Station*\nPlease select your destination station.",
     btnSelect: "🔽 Select Station",
-    langSet: "Language set to English! ✅",
+    langSet: "Language set to English! ✅\n\n⚠️ *Note:* Train search feature is only for Sealdah suburban (local) trains, not for Mail/Express trains.",
     pnrErr: "❌ PNR information not found.",
     liveErr: "❌ Live status not found.",
     btnErr: "❌ Route data not found.",
@@ -63,7 +63,7 @@ const LANG = {
     askFrom: "📍 *प्रस्थान स्टेशन*\nकृपया नीचे दी गई सूची से अपना स्टेशन चुनें।\n\n_(यदि आपका स्टेशन सूचीबद्ध नहीं है, तो बस टाइप करें: 'StationA to StationB')_",
     askTo: "🎯 *गंतव्य स्टेशन*\nकृपया अपना गंतव्य स्टेशन चुनें।",
     btnSelect: "🔽 स्टेशन चुनें",
-    langSet: "भाषा हिन्दी में सेट कर दी गई है! ✅",
+    langSet: "भाषा हिन्दी में सेट कर दी गई है! ✅\n\n⚠️ *नोट:* ट्रेन सर्च सुविधा केवल सियालदह लोकल ट्रेनों के लिए है, मेल/एक्सप्रेस के लिए नहीं।",
     pnrErr: "❌ PNR की जानकारी नहीं मिली।",
     liveErr: "❌ लाइव स्थिति नहीं मिली।",
     btnErr: "❌ रूट डेटा नहीं मिला।",
@@ -85,7 +85,7 @@ const LANG = {
     askFrom: "📍 *যাত্রার শুরুর স্টেশন*\nনিচের লিস্ট থেকে আপনি কোথা থেকে যাত্রা শুরু করবেন তা বেছে নিন।\n\n_(আপনার স্টেশন লিস্টে না থাকলে লিখে পাঠান: 'অমুক থেকে অমুক')_",
     askTo: "🎯 *গন্তব্য স্টেশন*\nআপনি কোথায় যেতে চান তা নিচের লিস্ট থেকে বেছে নিন।",
     btnSelect: "🔽 স্টেশন বেছে নিন",
-    langSet: "আপনার ভাষা বাংলা সেট করা হয়েছে! ✅",
+    langSet: "আপনার ভাষা বাংলা সেট করা হয়েছে! ✅\n\n⚠️ *বিশেষ দ্রষ্টব্য:* ট্রেন সার্চ শুধুমাত্র শিয়ালদা লোকাল ট্রেনের জন্য প্রযোজ্য, মেল বা এক্সপ্রেসের জন্য নয়।",
     pnrErr: "❌ PNR-এর তথ্য পাওয়া যাচ্ছে না।",
     liveErr: "❌ ট্রেনের লাইভ স্ট্যাটাস পাওয়া যাচ্ছে না।",
     btnErr: "❌ ট্রেনের ডেটা পাওয়া যাচ্ছে না।",
@@ -103,16 +103,16 @@ const LANG = {
    TOP 10 STATIONS FOR DROPDOWN
 ========================================================= */
 const TOP_STATIONS = [
-  { id: "stn_SDAH", title: "Sealdah", desc: "শিয়ালদা" },
-  { id: "stn_DDJ", title: "Dum Dum Jn", desc: "দমদম জংশন" },
-  { id: "stn_BT", title: "Barasat", desc: "বারাসত" },
-  { id: "stn_BNJ", title: "Bongaon", desc: "বনগাঁ" },
-  { id: "stn_NH", title: "Naihati", desc: "নৈহাটি" },
-  { id: "stn_KYI", title: "Kalyani", desc: "কল্যাণী" },
-  { id: "stn_RHA", title: "Ranaghat", desc: "রানাঘাট" },
-  { id: "stn_KNJ", title: "Krishnanagar", desc: "কৃষ্ণনগর" },
-  { id: "stn_STB", title: "Shantipur", desc: "শান্তিপুর" },
-  { id: "stn_BRP", title: "Baruipur", desc: "বারুইপুর" }
+  { id: "stn_SDAH", title: "Sealdah (SDAH)", description: "শিয়ালদা" },
+  { id: "stn_DDJ", title: "Dum Dum Jn (DDJ)", description: "দমদম জংশন" },
+  { id: "stn_BT", title: "Barasat (BT)", description: "বারাসত" },
+  { id: "stn_BNJ", title: "Bongaon (BNJ)", description: "বনগাঁ" },
+  { id: "stn_NH", title: "Naihati (NH)", description: "নৈহাটি" },
+  { id: "stn_KYI", title: "Kalyani (KYI)", description: "কল্যাণী" },
+  { id: "stn_RHA", title: "Ranaghat (RHA)", description: "রানাঘাট" },
+  { id: "stn_KNJ", title: "Krishnanagar (KNJ)", description: "কৃষ্ণনগর" },
+  { id: "stn_STB", title: "Shantipur (STB)", description: "শান্তিপুর" },
+  { id: "stn_BRP", title: "Baruipur (BRP)", description: "বারুইপুর" }
 ];
 
 /* =========================================================
@@ -128,10 +128,10 @@ async function sendInteractiveList(to, headerText, bodyText, buttonText, section
         header: { type: "text", text: headerText },
         body: { text: bodyText },
         footer: { text: "Sumanmusix" },
-        action: { button: buttonText, sections: sections }
+        action: { button: buttonText.substring(0, 20), sections: sections } // Button text limit safely handled
       }
     }, { headers: { Authorization: `Bearer ${WHATSAPP_TOKEN}`, "Content-Type": "application/json" } });
-  } catch (error) { console.error("Interactive Error:", error.message); }
+  } catch (error) { console.error("Interactive Error:", error.response?.data || error.message); }
 }
 
 async function sendLanguageMenu(to) {
@@ -160,7 +160,7 @@ async function sendStationMenu(to, lang, isFrom) {
   const t = LANG[lang];
   const header = isFrom ? "📍 Departure" : "🎯 Destination";
   const body = isFrom ? t.askFrom : t.askTo;
-  await sendInteractiveList(to, header, body, t.btnSelect, [
+  await sendInteractiveList(to, header, body, "🔽 Select Station", [
     { title: "Popular Stations", rows: TOP_STATIONS }
   ]);
 }
@@ -246,23 +246,31 @@ async function resolveStation(val) {
   } catch(e) { return null; }
 }
 
-async function handleBetween(from, to, lang) {
+async function handleBetween(from, to, userMessage, lang) {
   const date = getISTDate();
   try {
     const result = await railRadarGet(`/v1/trains/between/${from}/${to}`, { date, live: "true" });
     const trains = result?.data?.trains || result?.trains || [];
     if (trains.length === 0) return LANG[lang].noTrn;
 
+    // বর্তমান সময়ের ভিত্তিতে ট্রেন ফিল্টারিং (Time Filtering)
     let minTime = new Date().getHours() * 60 + new Date().getMinutes();
-    let filtered = trains.filter(t => timeToMinutes(t?.from?.departure || t?.departure) >= minTime).slice(0, 7);
+    let filtered = trains.filter(t => timeToMinutes(t?.from?.departure || t?.departure) >= minTime);
+    
     if (filtered.length === 0) return LANG[lang].noTrnToday;
+    
+    // মেসেজ বড় না করার জন্য পরের ৭টি ট্রেন দেখাবে
+    filtered = filtered.slice(0, 7);
 
-    let rep = `🚆 *${from} ➡ ${to}*\n📅 ${date}\n\n`;
+    let fromName = result?.data?.from?.name || from;
+    let toName = result?.data?.to?.name || to;
+
+    let rep = `🚆 *${fromName} ➡ ${toName}*\n📅 ${date}\n\n`;
     filtered.forEach((i, idx) => {
       let t = i.train || {}; let d = i.live?.delayMinutes; let p = i.live?.platform;
       rep += `*${idx+1}. 🚆 ${t.number||"-"} ${t.name||""}*\n   ⏰ ${formatTime(i.from?.departure||i.departure)} ➡ ${formatTime(i.to?.arrival||i.arrival)}\n`;
-      if(d>0) rep += `   ⏱️ Delay: ${d}m | 🚉 Plat: ${p||"-"}\n`;
-      rep += `   📍 Track: https://wa.me/${BOT_PHONE}?text=Live+${t.number||"-"}\n\n`;
+      if(d>0) rep += `   ⏱️ Delay: ${d} mins | 🚉 Plat: ${p||"-"}\n`;
+      rep += `   📍 Live Track: https://wa.me/${BOT_PHONE}?text=Live+${t.number||"-"}\n\n`;
     });
     return rep.trim();
   } catch(e) { return LANG[lang].btnErr; }
@@ -322,7 +330,7 @@ app.post("/webhook", async (req, res) => {
     if (message.type === "interactive") {
       const id = message.interactive.list_reply.id;
       
-      // Language Change
+      // Language Selection
       if (id.startsWith("lang_")) {
         userPrefs[from] = id.split("_")[1];
         await sendWhatsAppMessage(from, LANG[userPrefs[from]].langSet);
@@ -330,7 +338,7 @@ app.post("/webhook", async (req, res) => {
         return;
       }
       
-      // Main Menu Options
+      // Main Menu Selections
       if (id === "menu_pnr") { userState[from] = { step: "pnr" }; reply = LANG[lang].askPnr; }
       else if (id === "menu_live") { userState[from] = { step: "live" }; reply = LANG[lang].askLive; }
       else if (id === "menu_lang") { await sendLanguageMenu(from); return; }
@@ -340,7 +348,7 @@ app.post("/webhook", async (req, res) => {
         return; 
       }
       
-      // Station Selection
+      // Route Selection Flow (BUG FIXED HERE!)
       else if (id.startsWith("stn_")) {
         const stnCode = id.split("_")[1];
         if (userState[from]?.step === "route_from") {
@@ -351,7 +359,7 @@ app.post("/webhook", async (req, res) => {
         else if (userState[from]?.step === "route_to") {
            const fromStn = userState[from].fromStn;
            userState[from] = null; // Clear state
-           reply = await handleBetween(fromStn, stnCode, lang);
+           reply = await handleBetween(fromStn, stnCode, "", lang);
         }
       }
     } 
@@ -361,11 +369,9 @@ app.post("/webhook", async (req, res) => {
       const txt = cleanText(message.text.body);
       const rawTxt = message.text.body.trim();
       
-      // Triggers for Menu
       if (["hi", "hello", "menu", "হ্যালো", "হাই"].includes(txt)) { await sendMainMenu(from, lang); return; }
       if (["lang", "language", "ভাষা"].includes(txt)) { await sendLanguageMenu(from); return; }
       
-      // Regex Global Checks (Overrides State)
       const pnrMatch = bengaliToEnglishDigits(rawTxt).match(/\b\d{10}\b/);
       const trainMatch = bengaliToEnglishDigits(rawTxt).match(/\b\d{5}\b/);
       let routeMatch = rawTxt.match(/(.+?)\s+(থেকে|to)\s+(.+)/i);
@@ -376,15 +382,13 @@ app.post("/webhook", async (req, res) => {
          userState[from] = null;
          let f = await resolveStation(routeMatch[1].trim());
          let t = await resolveStation(routeMatch[3].trim());
-         if(f && t) reply = await handleBetween(f, t, lang);
+         if(f && t) reply = await handleBetween(f, t, "", lang);
       }
-      // Handle active state if user typed instead of clicking
       else if (userState[from]?.step === "pnr") { reply = LANG[lang].pnrErr; }
       else if (userState[from]?.step === "live") { reply = LANG[lang].liveErr; }
       else {
-        // AI Fallback
         if (ai) {
-          const resp = await ai.models.generateContent({ model: "gemini-3.5-flash-lite", contents: `Act as Sealdah Train Bot. Reply shortly. User: ${rawTxt}` });
+          const resp = await ai.models.generateContent({ model: "gemini-3.5-flash-lite", contents: `Act as Sealdah Train Bot. Reply shortly. Note: Search only for local trains. User: ${rawTxt}` });
           reply = resp?.text || resp?.candidates?.[0]?.content?.parts?.[0]?.text || "Menu: Type 'Hi'";
         } else reply = "Please type 'Menu' or 'Hi'.";
       }
@@ -395,7 +399,7 @@ app.post("/webhook", async (req, res) => {
       const loc = getNearestStation(message.location.latitude, message.location.longitude);
       if (loc.station) {
         reply = `${LANG[lang].locTrack} *${loc.station.name}*.\n\n`;
-        if (loc.station.code !== "SDAH") reply += await handleBetween(loc.station.code, "SDAH", lang);
+        if (loc.station.code !== "SDAH") reply += await handleBetween(loc.station.code, "SDAH", "", lang);
         else reply += LANG[lang].askDest;
       } else reply = LANG[lang].locErr;
     }
@@ -411,10 +415,328 @@ app.get("/webhook", (req, res) => {
 });
 
 /* =========================================================
-   FRONTEND - PRO DASHBOARD
+   FRONTEND - BEAUTIFUL PREMIUM DASHBOARD (RESTORED & UPGRADED)
 ========================================================= */
-app.get("/", (req, res) => res.send(`<h2>🚆 Sealdah Transit Hub API Active!</h2>`));
+app.get("/", (req, res) => {
+  res.send(`
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Sealdah Transit Hub | Pro Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+  :root {
+    --bg-main: #0a0e17;
+    --bg-card: rgba(20, 26, 40, 0.7);
+    --border-color: rgba(255, 255, 255, 0.1);
+    --primary: #3b82f6;
+    --primary-hover: #2563eb;
+    --text-main: #ffffff;
+    --text-muted: #9ca3af;
+    --accent-green: #10b981;
+    --warning: #fbbf24;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 0;
+    font-family: 'Inter', sans-serif;
+    background: radial-gradient(circle at top right, #111827, var(--bg-main));
+    color: var(--text-main);
+    min-height: 100vh;
+  }
+  .container { max-width: 800px; margin: 0 auto; padding: 40px 20px; }
+  .header { text-align: center; margin-bottom: 25px; }
+  .header h1 {
+    font-size: 2.2rem; margin: 0 0 10px; font-weight: 700;
+    background: linear-gradient(to right, #60a5fa, #a78bfa);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .header p { color: var(--text-muted); font-size: 1rem; margin: 0 0 15px 0; }
+  
+  .status-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.2);
+    color: var(--accent-green); padding: 6px 12px; border-radius: 20px;
+    font-size: 0.85rem; font-weight: 500;
+  }
+  .status-badge .dot { width: 8px; height: 8px; background: var(--accent-green); border-radius: 50%; box-shadow: 0 0 8px var(--accent-green); }
 
+  .notice-banner {
+    background: rgba(251, 191, 36, 0.1); border: 1px solid rgba(251, 191, 36, 0.2);
+    color: var(--warning); padding: 12px 15px; border-radius: 12px;
+    font-size: 0.9rem; text-align: center; margin-bottom: 30px; font-weight: 500;
+  }
+
+  .tabs {
+    display: flex; gap: 10px; margin-bottom: 25px;
+    background: rgba(0,0,0,0.3); padding: 8px; border-radius: 14px;
+    overflow-x: auto;
+  }
+  .tabs button {
+    flex: 1; min-width: 120px; padding: 12px; border: none; border-radius: 10px;
+    background: transparent; color: var(--text-muted); font-weight: 600; font-size: 0.95rem;
+    cursor: pointer; transition: all 0.3s ease;
+  }
+  .tabs button:hover { color: var(--text-main); }
+  .tabs button.active { background: var(--bg-card); color: var(--text-main); box-shadow: 0 4px 12px rgba(0,0,0,0.2); border: 1px solid var(--border-color); }
+
+  .glass-card {
+    background: var(--bg-card); backdrop-filter: blur(16px);
+    border: 1px solid var(--border-color); border-radius: 20px;
+    padding: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    display: none; animation: fadeIn 0.4s ease forwards;
+  }
+  .glass-card.active { display: block; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+  .glass-card h2 { margin-top: 0; font-size: 1.4rem; font-weight: 600; border-bottom: 1px solid var(--border-color); padding-bottom: 15px; margin-bottom: 20px; }
+  
+  .input-group { margin-bottom: 15px; }
+  input {
+    width: 100%; padding: 14px 16px; border-radius: 12px; border: 1px solid var(--border-color);
+    background: rgba(0,0,0,0.2); color: white; font-size: 1rem; font-family: 'Inter', sans-serif;
+    transition: all 0.3s;
+  }
+  input:focus { outline: none; border-color: var(--primary); background: rgba(0,0,0,0.4); box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2); }
+  
+  .btn-primary {
+    width: 100%; padding: 14px; border: none; border-radius: 12px;
+    background: var(--primary); color: white; font-size: 1.05rem; font-weight: 600;
+    cursor: pointer; transition: all 0.3s;
+  }
+  .btn-primary:hover { background: var(--primary-hover); transform: translateY(-2px); box-shadow: 0 8px 20px rgba(59, 130, 246, 0.3); }
+
+  .result-box {
+    margin-top: 20px; background: rgba(0,0,0,0.4); border-radius: 12px;
+    padding: 20px; white-space: pre-wrap; line-height: 1.6; font-size: 0.95rem;
+    border: 1px solid var(--border-color);
+  }
+  .loading { display: none; text-align: center; color: var(--primary); font-weight: 600; margin: 20px 0; }
+
+  #map { height: 400px; border-radius: 12px; border: 1px solid var(--border-color); margin-top: 20px; z-index: 1; }
+  
+  .footer { text-align: center; color: var(--text-muted); margin-top: 50px; font-size: 0.85rem; }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="header">
+    <h1>🚆 Sealdah Transit Hub</h1>
+    <p>Live Railway Intelligence Dashboard</p>
+    <div class="status-badge"><div class="dot"></div> System Online & Bot Active</div>
+  </div>
+
+  <div class="notice-banner">
+    ⚠️ <b>বিশেষ দ্রষ্টব্য:</b> ট্রেন সার্চের এই ফিচারটি শুধুমাত্র শিয়ালদা ডিভিশনের লোকাল ট্রেনের জন্য প্রযোজ্য, কোনো মেল বা এক্সপ্রেস ট্রেনের জন্য নয়।
+  </div>
+
+  <div class="tabs">
+    <button class="active" onclick="switchTab('tab-live', this)">Live Status</button>
+    <button onclick="switchTab('tab-route', this)">Between Stations</button>
+    <button onclick="switchTab('tab-pnr', this)">PNR Check</button>
+    <button onclick="switchTab('tab-map', this)">Live Map</button>
+  </div>
+
+  <!-- Live Status Tab -->
+  <div id="tab-live" class="glass-card active">
+    <h2>📡 Live Train Status</h2>
+    <div class="input-group">
+      <input id="live-input" type="text" placeholder="Enter Train Number (e.g. 31530)" maxlength="5">
+    </div>
+    <button class="btn-primary" onclick="fetchData('live-input', '/api/live-status?train=', 'live-result', 'live-load')">Check Status</button>
+    <div id="live-load" class="loading">Fetching live data...</div>
+    <div id="live-result" class="result-box">Train results will appear here.</div>
+  </div>
+
+  <!-- Route Tab -->
+  <div id="tab-route" class="glass-card">
+    <h2>🗺️ Find Trains Between Stations</h2>
+    <div class="input-group"><input id="route-from" type="text" placeholder="From Station (e.g. Shantipur)"></div>
+    <div class="input-group"><input id="route-to" type="text" placeholder="To Station (e.g. Sealdah)"></div>
+    <div class="input-group"><input id="route-date" type="date"></div>
+    <button class="btn-primary" onclick="fetchRoute()">Search Trains</button>
+    <div id="route-load" class="loading">Searching routes...</div>
+    <div id="route-result" class="result-box">Schedule will appear here.</div>
+  </div>
+
+  <!-- PNR Tab -->
+  <div id="tab-pnr" class="glass-card">
+    <h2>🎫 PNR Status Check</h2>
+    <div class="input-group">
+      <input id="pnr-input" type="text" placeholder="Enter 10-digit PNR" maxlength="10">
+    </div>
+    <button class="btn-primary" onclick="fetchData('pnr-input', '/api/pnr?pnr=', 'pnr-result', 'pnr-load')">Check PNR</button>
+    <div id="pnr-load" class="loading">Verifying PNR...</div>
+    <div id="pnr-result" class="result-box">PNR details will appear here.</div>
+  </div>
+
+  <!-- Map Tab -->
+  <div id="tab-map" class="glass-card">
+    <h2>🌍 Live GPS Map</h2>
+    <div class="input-group">
+      <input id="map-input" type="text" placeholder="Enter Train Number" maxlength="5">
+    </div>
+    <button class="btn-primary" onclick="loadMap()">View on Map</button>
+    <div id="map-load" class="loading">Locating train on map...</div>
+    <div id="map"></div>
+    <div id="map-result" class="result-box" style="margin-top: 15px; display: none;"></div>
+  </div>
+
+  <div class="footer">
+    Powered by <b>Suman Biswas</b>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+  document.getElementById("route-date").value = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+
+  function switchTab(tabId, btn) {
+    document.querySelectorAll('.glass-card').forEach(c => c.classList.remove('active'));
+    document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
+    document.getElementById(tabId).classList.add('active');
+    btn.classList.add('active');
+  }
+
+  async function fetchData(inputId, endpoint, resultId, loadId) {
+    const val = document.getElementById(inputId).value.trim();
+    const resBox = document.getElementById(resultId);
+    const loadBox = document.getElementById(loadId);
+    if(!val) { resBox.textContent = "Please enter a valid input."; return; }
+    
+    resBox.style.display = 'none'; loadBox.style.display = 'block';
+    try {
+      const res = await fetch(endpoint + encodeURIComponent(val));
+      const data = await res.json();
+      resBox.textContent = data.message || JSON.stringify(data, null, 2);
+    } catch(err) {
+      resBox.textContent = "Error fetching data. Please try again.";
+    }
+    loadBox.style.display = 'none'; resBox.style.display = 'block';
+  }
+
+  async function fetchRoute() {
+    const from = document.getElementById('route-from').value.trim();
+    const to = document.getElementById('route-to').value.trim();
+    const date = document.getElementById('route-date').value;
+    const resBox = document.getElementById('route-result');
+    const loadBox = document.getElementById('route-load');
+
+    if(!from || !to) { resBox.textContent = "Please enter both stations."; return; }
+    resBox.style.display = 'none'; loadBox.style.display = 'block';
+
+    try {
+      const url = \`/api/between?from=\${encodeURIComponent(from)}&to=\${encodeURIComponent(to)}&date=\${date}\`;
+      const res = await fetch(url);
+      const data = await res.json();
+      resBox.textContent = data.message || JSON.stringify(data, null, 2);
+    } catch(err) { resBox.textContent = "Error fetching schedule."; }
+    loadBox.style.display = 'none'; resBox.style.display = 'block';
+  }
+
+  let map = null;
+  async function loadMap() {
+    const train = document.getElementById("map-input").value.trim();
+    const resBox = document.getElementById("map-result");
+    const loadBox = document.getElementById("map-load");
+    if(!train) return;
+
+    loadBox.style.display = 'block'; resBox.style.display = 'none';
+    try {
+      const response = await fetch("/api/map?train=" + encodeURIComponent(train));
+      const data = await response.json();
+      if(data.error) { resBox.textContent = data.error; resBox.style.display = 'block'; loadBox.style.display = 'none'; return; }
+
+      if(!map) {
+        map = L.map("map").setView([22.57, 88.36], 8);
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
+      }
+      map.eachLayer(layer => { if(layer instanceof L.Marker || layer instanceof L.GeoJSON) map.removeLayer(layer); });
+
+      if(data.geojson) {
+        const route = L.geoJSON(data.geojson, { style: { color: '#3b82f6', weight: 4 } }).addTo(map);
+        map.fitBounds(route.getBounds());
+      }
+      
+      const currentCode = data.currentLocation?.stationCode;
+      let currentStop = data.stops?.find(s => s.code === currentCode);
+      
+      if(currentStop) {
+        L.marker([currentStop.lat, currentStop.lng]).addTo(map)
+         .bindPopup("🚆 <b>" + data.trainNumber + "</b><br>📍 " + currentStop.name).openPopup();
+      }
+
+      resBox.innerHTML = \`<b>Status:</b> \${data.status || "-"} <br><b>Delay:</b> \${data.delayMinutes ?? 0} mins\`;
+      resBox.style.display = 'block';
+    } catch(error) {
+      resBox.textContent = "Live map unavailable."; resBox.style.display = 'block';
+    }
+    loadBox.style.display = 'none';
+  }
+</script>
+</body>
+</html>
+  `);
+});
+
+/* =========================================================
+   API FOR WEB FRONTEND
+========================================================= */
+app.get("/api/live-status", async (req, res) => {
+  const train = req.query.train?.replace(/\D/g, "");
+  if (!/^\d{5}$/.test(train)) return res.status(400).json({ error: true, message: "Invalid Train Number" });
+  try { res.json({ success: true, message: await handleLive(train, "en") }); } 
+  catch (error) { res.status(500).json({ error: true }); }
+});
+
+app.get("/api/pnr", async (req, res) => {
+  const pnr = req.query.pnr?.replace(/\D/g, "");
+  if (!/^\d{10}$/.test(pnr)) return res.status(400).json({ error: true, message: "Invalid PNR" });
+  try { res.json({ success: true, message: await handlePNR(pnr, "en") }); } 
+  catch (error) { res.status(500).json({ error: true }); }
+});
+
+app.get("/api/between", async (req, res) => {
+  const fromInput = req.query.from || "";
+  const toInput = req.query.to || "";
+  const date = req.query.date || getISTDate();
+  try {
+    const from = await resolveStation(fromInput);
+    const to = await resolveStation(toInput);
+    if (!from || !to) return res.status(400).json({ error: true, message: "Station not found. Use correct name." });
+    
+    res.json({ success: true, message: await handleBetween(from, to, "", "en") });
+  } catch (error) { res.status(500).json({ error: true, message: "Data unavailable." }); }
+});
+
+app.get("/api/map", async (req, res) => {
+  const train = req.query.train?.replace(/\D/g, "");
+  if (!/^\d{5}$/.test(train)) return res.status(400).json({ error: "Invalid Train Number" });
+  try {
+    const [live, route] = await Promise.all([
+      railRadarGet(`/v1/trains/${train}/live`, { authoritative: "true" }), 
+      railRadarGet(`/v1/trains/${train}/route`, { format: "geojson", stops: "true" })
+    ]);
+    const liveData = live?.data || live; const routeData = route?.data || route;
+    res.json({
+      trainNumber: liveData?.trainNumber || routeData?.trainNumber || train,
+      trainName: liveData?.train?.name || "",
+      status: liveData?.status || "",
+      delayMinutes: liveData?.delayMinutes ?? null,
+      currentLocation: liveData?.currentLocation || null,
+      geojson: routeData?.geojson || null,
+      stops: routeData?.stops || []
+    });
+  } catch (error) { res.status(500).json({ error: "Map data unavailable" }); }
+});
+
+/* =========================================================
+   START SERVER
+========================================================= */
 app.listen(PORT, () => {
   console.log("==========================================");
   console.log("🚆 PREMIUM SEALDAH BOT IS LIVE!");
