@@ -66,6 +66,41 @@ function formatTime(time) {
 }
 
 /* =========================================================
+   OBJECT TO TEXT EXTRACTOR (FIX FOR [object Object])
+========================================================= */
+function extractText(obj) {
+  if (obj === null || obj === undefined) return "-";
+  if (typeof obj === "string") return obj;
+  if (typeof obj === "number") return String(obj);
+  
+  if (typeof obj === "object") {
+    if (Array.isArray(obj)) return obj.map(extractText).join(" / ");
+    
+    if (obj.status) return extractText(obj.status);
+    if (obj.code) return extractText(obj.code);
+    if (obj.text) return extractText(obj.text);
+    if (obj.statusText) return extractText(obj.statusText);
+    if (obj.details) return extractText(obj.details);
+    if (obj.bookingStatusText) return extractText(obj.bookingStatusText);
+    
+    try {
+      const values = Object.values(obj).filter(v => v !== null && v !== undefined && typeof v !== 'object');
+      if (values.length > 0) return values.join(" / ");
+      return Object.values(obj).map(extractText).filter(v => v !== "-").join(" / ") || "-";
+    } catch(e) {
+      return "-";
+    }
+  }
+  return String(obj);
+}
+
+function formatStationValue(value) {
+  if (!value) return "-";
+  if (typeof value === "string") return value;
+  return value.name || value.stationName || value.code || value.stationCode || "-";
+}
+
+/* =========================================================
    STATION ALIASES (For Text Search)
 ========================================================= */
 const STATIONS = {
@@ -310,18 +345,15 @@ async function getPNR(pnr) {
 }
 
 /* =========================================================
-   NEW POWERFUL PNR FORMATTER (BUG FIXED)
+   PNR FORMATTER (WITH BUG FIX)
 ========================================================= */
 function formatPNR(result, pnr) {
   const data = result?.data || result;
   if (!data) return `❌ PNR ${pnr}-এর তথ্য পাওয়া যায়নি।`;
 
-  // --- TRAIN INFO --- (যেখানে খুশি লুকানো থাকুক, বের করে আনবে)
-  const tNumber = data.trainNumber || data.trainNo || data.train?.number || data.train?.trainNumber || "";
-  const tName = data.trainName || data.name || data.train?.name || data.train?.trainName || "";
-  
-  // --- ROUTE & DATE ---
-  const jDate = data.journeyDate || data.date || data.jdate || data.doj || "";
+  const tNumber = extractText(data.trainNumber || data.trainNo || data.train?.number || data.train?.trainNumber || "");
+  const tName = extractText(data.trainName || data.name || data.train?.name || data.train?.trainName || "");
+  const jDate = extractText(data.journeyDate || data.date || data.jdate || data.doj || "");
   
   const fromObj = data.boardingStation || data.board || data.fromStation || data.source || {};
   const from = typeof fromObj === 'string' ? fromObj : (fromObj.name || fromObj.code || data.from || "");
@@ -329,47 +361,38 @@ function formatPNR(result, pnr) {
   const toObj = data.reservationUpto || data.toStation || data.destination || {};
   const to = typeof toObj === 'string' ? toObj : (toObj.name || toObj.code || data.to || "");
   
-  // --- EXTRAS ---
-  const boardTime = data.boardTime || data.departureTime || data.departure || data.trainBoardTime || "";
-  const chartStatus = data.chartStatus || data.chartingStatus || data.chartPrepared || "";
-  const trainClass = data.journeyClass || data.class || data.trainClass || "";
+  const boardTime = extractText(data.boardTime || data.departureTime || data.departure || data.trainBoardTime || "");
+  const chartStatus = extractText(data.chartStatus || data.chartingStatus || data.chartPrepared || "");
+  const trainClass = extractText(data.journeyClass || data.class || data.trainClass || "");
 
   let reply = `🎫 *PNR Status*\n━━━━━━━━━━━━━━\n📌 *PNR:* ${pnr}\n`;
   
-  if (tNumber || tName) reply += `🚆 *ট্রেন:* ${tNumber} ${tName}\n`;
-  if (from || to) reply += `🛤️ *রুট:* ${from} ➡ ${to}\n`;
-  if (jDate) reply += `📅 *তারিখ:* ${jDate}\n`;
-  if (boardTime) reply += `⏰ *ছাড়ার সময়:* ${boardTime}\n`;
-  if (trainClass) reply += `💺 *ক্লাস:* ${trainClass}\n`;
-  if (chartStatus) reply += `📋 *চার্ট:* ${chartStatus}\n`;
+  if (tNumber !== "-" || tName !== "-") reply += `🚆 *ট্রেন:* ${tNumber} ${tName}\n`;
+  if (from !== "-" || to !== "-") reply += `🛤️ *রুট:* ${formatStationValue(from)} ➡ ${formatStationValue(to)}\n`;
+  if (jDate !== "-") reply += `📅 *তারিখ:* ${jDate}\n`;
+  if (boardTime !== "-") reply += `⏰ *ছাড়ার সময়:* ${boardTime}\n`;
+  if (trainClass !== "-") reply += `💺 *ক্লাস:* ${trainClass}\n`;
+  if (chartStatus !== "-") reply += `📋 *চার্ট:* ${chartStatus}\n`;
 
-  // --- PASSENGERS ---
   const passengers = data.passengers || data.passengerDetails || data.passengerList || data.bookingStatus || [];
 
   if (Array.isArray(passengers) && passengers.length > 0) {
     reply += "\n👥 *প্যাসেঞ্জার স্ট্যাটাস:*\n";
     
     passengers.forEach((p, i) => {
-      let bStatus = p.bookingStatus || p.bookingStatusText || p.bookingStatusIndex || p.booking || "";
-      let cStatus = p.currentStatus || p.currentStatusText || p.status || "";
+      let bStatus = extractText(p.bookingStatus || p.bookingStatusText || p.bookingStatusIndex || p.booking);
+      let cStatus = extractText(p.currentStatus || p.currentStatusText || p.status);
       
-      let coach = p.currentCoach || p.coach || p.coachNo || p.currentCoachId || p.bookingCoachId || "";
-      let berth = p.currentBerthNo || p.berthNo || p.berth || p.seatNo || p.bookingBerthNo || "";
-      let berthType = p.currentBerthCode || p.berthCode || p.berthType || "";
-      
-      let cIndex = p.currentStatusIndex || p.currentStatusDetails || "";
+      let coach = extractText(p.currentCoach || p.coach || p.coachNo || p.currentCoachId || p.bookingCoachId);
+      let berth = extractText(p.currentBerthNo || p.berthNo || p.berth || p.seatNo || p.bookingBerthNo);
+      let berthType = extractText(p.currentBerthCode || p.berthCode || p.berthType);
       
       let displayCurrent = cStatus;
 
-      // যদি API-তে কোচ এবং বার্থ আলাদা থাকে
-      if (coach && berth && coach !== "-" && berth !== "-") {
-         displayCurrent = `${cStatus} (কোচ: ${coach}, সিট: ${berth} ${berthType})`;
+      if (coach !== "-" && berth !== "-") {
+         displayCurrent = `কোচ: ${coach} | সিট: ${berth} ${berthType !== "-" ? berthType : ""} (${cStatus})`;
       } 
-      // যদি সিট নাম্বারগুলো টেক্সটের মাঝে লুকানো থাকে
-      else if (cIndex && cIndex !== cStatus) {
-         displayCurrent = `${cStatus} [${cIndex}]`;
-      }
-
+      
       reply += `*${i + 1}.* বুকিং: ${bStatus} | বর্তমান: ${displayCurrent}\n`;
     });
   }
@@ -481,9 +504,7 @@ async function processUserMessage(userMessage) {
 ========================================================= */
 async function sendWhatsAppMessage(to, text) {
   try {
-    // Sumanmusix Signature added here
     const finalText = text + "\n\nSumanmusix";
-
     const url = `https://graph.facebook.com/v22.0/${PHONE_NUMBER_ID}/messages`;
     await axios.post(url, {
       messaging_product: "whatsapp", recipient_type: "individual", to, type: "text",
