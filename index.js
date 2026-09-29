@@ -2,206 +2,320 @@ require("dotenv").config();
 
 const express = require("express");
 const axios = require("axios");
-const Groq = require("groq-sdk");
+const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 const app = express();
+
 app.use(express.json());
 
 const PORT = process.env.PORT || 10000;
 
-const WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN;
-const PHONE_NUMBER_ID = process.env.PHONE_NUMBER_ID;
-const VERIFY_TOKEN = process.env.VERIFY_TOKEN;
-const GROQ_API_KEY = process.env.GROQ_API_KEY;
+const WHATSAPP_TOKEN =
+  process.env.WHATSAPP_TOKEN;
+
+const PHONE_NUMBER_ID =
+  process.env.PHONE_NUMBER_ID;
+
+const VERIFY_TOKEN =
+  process.env.VERIFY_TOKEN;
+
+const GEMINI_API_KEY =
+  process.env.GEMINI_API_KEY;
+
+const RAILRADAR_API_KEY =
+  process.env.RAILRADAR_API_KEY;
+
 
 /*
-========================================
-GROQ
-========================================
+==================================================
+GEMINI
+==================================================
 */
 
-const groq = new Groq({
-  apiKey: GROQ_API_KEY
-});
+const genAI =
+  new GoogleGenerativeAI(
+    GEMINI_API_KEY
+  );
+
+const geminiModel =
+  genAI.getGenerativeModel({
+    model: "gemini-2.5-flash"
+  });
+
 
 /*
-========================================
+==================================================
 STATION DATABASE
-========================================
+==================================================
 */
 
 const STATIONS = {
+
   "শান্তিপুর": "STB",
   "শান্তিপুর জংশন": "STB",
+  "শান্তিপুর স্টেশন": "STB",
   "santipur": "STB",
   "santipur junction": "STB",
 
   "শিয়ালদহ": "SDAH",
   "শিয়ালদা": "SDAH",
+  "শিয়ালদহ": "SDAH",
+  "শিয়ালদা": "SDAH",
   "sealdah": "SDAH",
 
-  "কলকাতা": "KOAA",
-  "কলকাতা টার্মিনাল": "KOAA",
-  "kolkata": "KOAA",
-
-  "নৈহাটি": "NH",
-  "naihati": "NH",
-
   "রানাঘাট": "RHA",
+  "রানাঘাট জংশন": "RHA",
   "ranaghat": "RHA",
 
   "কৃষ্ণনগর": "KNJ",
+  "কৃষ্ণনগর সিটি": "KNJ",
   "krishnanagar": "KNJ",
+
+  "নৈহাটি": "NH",
+  "naihati": "NH",
 
   "কল্যাণী": "KYI",
   "kalyani": "KYI",
 
   "বারাসাত": "BT",
-  "barasat": "BT"
+  "barasat": "BT",
+
+  "দমদম": "DDJ",
+  "dum dum": "DDJ",
+
+  "কলকাতা": "KOAA",
+  "কলকাতা স্টেশন": "KOAA",
+  "kolkata": "KOAA"
 };
 
+
 /*
-========================================
+==================================================
 HOME
-========================================
+==================================================
 */
 
 app.get("/", (req, res) => {
-  res.send(`
+
+  res.status(200).send(`
+    <!DOCTYPE html>
     <html>
       <head>
         <title>Sealdah Train Service AI Bot</title>
       </head>
+
       <body>
+
         <h1>🚆 Sealdah Train Service AI Bot</h1>
+
         <p>Bot is running successfully.</p>
-        <p>WhatsApp Webhook: /webhook</p>
-        <p>Health Check: /api</p>
+
+        <p>
+          WhatsApp Webhook:
+          /webhook
+        </p>
+
+        <p>
+          Health:
+          /api
+        </p>
+
       </body>
     </html>
   `);
+
 });
 
+
 /*
-========================================
-HEALTH CHECK
-========================================
+==================================================
+HEALTH
+==================================================
 */
 
 app.get("/api", (req, res) => {
+
   res.json({
+
     status: "online",
-    service: "Sealdah Train Service AI Bot",
-    whatsapp: PHONE_NUMBER_ID ? "connected" : "missing",
-    groq: GROQ_API_KEY ? "connected" : "missing"
+
+    service:
+      "Sealdah Train Service AI Bot",
+
+    whatsapp:
+      WHATSAPP_TOKEN &&
+      PHONE_NUMBER_ID
+        ? "OK"
+        : "MISSING",
+
+    gemini:
+      GEMINI_API_KEY
+        ? "OK"
+        : "MISSING",
+
+    railway:
+      RAILRADAR_API_KEY
+        ? "OK"
+        : "MISSING"
+
   });
+
 });
 
+
 /*
-========================================
+==================================================
 PRIVACY
-========================================
+==================================================
 */
 
 app.get("/privacy", (req, res) => {
+
   res.send(`
     <html>
+
       <head>
         <title>Privacy Policy</title>
       </head>
+
       <body>
-        <h1>Sealdah Train Service AI Bot</h1>
+
+        <h1>
+          Sealdah Train Service AI Bot
+        </h1>
 
         <p>
-        This WhatsApp bot processes messages only for providing
-        railway information and automated assistance.
+          This service processes WhatsApp
+          messages to provide railway
+          information and automated
+          assistance.
         </p>
 
         <p>
-        Messages are processed through the configured AI and
-        railway information services.
+          Messages may be processed by
+          configured AI and railway
+          information services.
         </p>
+
       </body>
+
     </html>
   `);
+
 });
 
+
 /*
-========================================
-WHATSAPP WEBHOOK VERIFY
-========================================
+==================================================
+WHATSAPP WEBHOOK VERIFICATION
+==================================================
 */
 
 app.get("/webhook", (req, res) => {
 
-  const mode = req.query["hub.mode"];
-  const token = req.query["hub.verify_token"];
-  const challenge = req.query["hub.challenge"];
+  const mode =
+    req.query["hub.mode"];
 
-  console.log("Webhook verification request");
+  const token =
+    req.query["hub.verify_token"];
+
+  const challenge =
+    req.query["hub.challenge"];
+
 
   if (
     mode === "subscribe" &&
     token === VERIFY_TOKEN
   ) {
 
-    console.log("WhatsApp Webhook Verified");
+    console.log(
+      "WhatsApp Webhook Verified"
+    );
 
     return res
       .status(200)
       .send(challenge);
+
   }
 
+
   return res.sendStatus(403);
+
 });
 
+
 /*
-========================================
+==================================================
 SEND WHATSAPP MESSAGE
-========================================
+==================================================
 */
 
-async function sendWhatsAppMessage(to, text) {
+async function sendWhatsAppMessage(
+  to,
+  text
+) {
 
   try {
 
     const url =
       `https://graph.facebook.com/v22.0/${PHONE_NUMBER_ID}/messages`;
 
-    await axios.post(
 
-      url,
+    const response =
+      await axios.post(
 
-      {
-        messaging_product: "whatsapp",
+        url,
 
-        recipient_type: "individual",
+        {
 
-        to: to,
+          messaging_product:
+            "whatsapp",
 
-        type: "text",
+          recipient_type:
+            "individual",
 
-        text: {
-          preview_url: false,
-          body: text
+          to: to,
+
+          type:
+            "text",
+
+          text: {
+
+            preview_url:
+              false,
+
+            body:
+              text
+
+          }
+
+        },
+
+        {
+
+          headers: {
+
+            Authorization:
+              `Bearer ${WHATSAPP_TOKEN}`,
+
+            "Content-Type":
+              "application/json"
+
+          }
+
         }
-      },
 
-      {
-        headers: {
-          Authorization:
-            `Bearer ${WHATSAPP_TOKEN}`,
+      );
 
-          "Content-Type":
-            "application/json"
-        }
-      }
-    );
 
     console.log(
       "WhatsApp message sent successfully:",
       to
     );
+
+
+    return response.data;
+
 
   } catch (error) {
 
@@ -210,461 +324,935 @@ async function sendWhatsAppMessage(to, text) {
       error.response?.data ||
       error.message
     );
+
   }
+
 }
 
+
 /*
-========================================
+==================================================
 FIND STATION CODE
-========================================
+==================================================
 */
 
 function findStationCode(text) {
 
+  if (!text) {
+    return null;
+  }
+
   const lower =
-    text.toLowerCase().trim();
+    text.toLowerCase();
 
-  for (const name of Object.keys(STATIONS)) {
+  for (
+    const stationName
+    of Object.keys(STATIONS)
+  ) {
 
-    if (lower.includes(name.toLowerCase())) {
+    if (
+      lower.includes(
+        stationName.toLowerCase()
+      )
+    ) {
 
-      return STATIONS[name];
+      return STATIONS[
+        stationName
+      ];
+
     }
+
   }
 
   return null;
+
 }
 
+
 /*
-========================================
-FIND SOURCE + DESTINATION
-========================================
+==================================================
+DETECT ROUTE
+==================================================
 */
 
 function detectRoute(text) {
 
-  const normalized =
-    text
-      .replace(/থেকে/g, " থেকে ")
-      .replace(/যাওয়ার/g, " যাওয়ার ");
-
-  const words =
-    normalized.split(/\s+/);
-
   let source = null;
   let destination = null;
 
-  const fromIndex =
-    words.findIndex(
-      word =>
-        word === "থেকে"
-    );
-
-  if (fromIndex > 0) {
-
-    const sourceText =
-      words
-        .slice(
-          Math.max(0, fromIndex - 3),
-          fromIndex
-        )
-        .join(" ");
-
-    source =
-      findStationCode(
-        sourceText
-      );
-  }
-
-  const toIndex =
-    words.findIndex(
-      word =>
-        word === "দিকে" ||
-        word === "যাওয়ার" ||
-        word === "যাওয়ার"
-    );
-
-  if (toIndex > 0) {
-
-    const destText =
-      words
-        .slice(
-          toIndex + 1,
-          toIndex + 4
-        )
-        .join(" ");
-
-    destination =
-      findStationCode(
-        destText
-      );
-  }
 
   /*
-  Direct known route detection
+  Bengali direct routes
   */
 
   if (
     text.includes("শান্তিপুর") &&
     (
       text.includes("শিয়ালদহ") ||
-      text.includes("শিয়ালদা")
+      text.includes("শিয়ালদা") ||
+      text.includes("শিয়ালদহ") ||
+      text.includes("শিয়ালদা")
     )
   ) {
 
     source = "STB";
     destination = "SDAH";
+
   }
 
+
   if (
-    text.toLowerCase().includes("santipur") &&
-    text.toLowerCase().includes("sealdah")
+    text.includes("রানাঘাট") &&
+    (
+      text.includes("শিয়ালদহ") ||
+      text.includes("শিয়ালদা") ||
+      text.includes("শিয়ালদহ") ||
+      text.includes("শিয়ালদা")
+    )
+  ) {
+
+    source = "RHA";
+    destination = "SDAH";
+
+  }
+
+
+  /*
+  English
+  */
+
+  const lower =
+    text.toLowerCase();
+
+  if (
+    lower.includes("santipur") &&
+    lower.includes("sealdah")
   ) {
 
     source = "STB";
     destination = "SDAH";
+
   }
+
+
+  if (
+    lower.includes("ranaghat") &&
+    lower.includes("sealdah")
+  ) {
+
+    source = "RHA";
+    destination = "SDAH";
+
+  }
+
+
+  /*
+  Generic "থেকে"
+  */
+
+  const fromMatch =
+    text.match(
+      /(.+?)\s+থেকে\s+(.+?)(?:\s+যাওয়া|\s+যাওয়ার|\s+যাওয়ার|\s+যাব|\s*$)/i
+    );
+
+
+  if (
+    fromMatch &&
+    !source &&
+    !destination
+  ) {
+
+    source =
+      findStationCode(
+        fromMatch[1]
+      );
+
+    destination =
+      findStationCode(
+        fromMatch[2]
+      );
+
+  }
+
 
   return {
     source,
     destination
   };
+
 }
 
+
 /*
-========================================
-RAILWAY API
-========================================
-
-If you have a Railway API provider,
-put the API details in Render Environment.
-
-Required:
-
-RAIL_API_URL
-RAIL_API_KEY
-
-The bot will call the API only when
-both are available.
-========================================
+==================================================
+GET TODAY IST
+==================================================
 */
 
-async function getTrainsBetweenStations(
+function getTodayIST() {
+
+  const now =
+    new Date();
+
+  const parts =
+    new Intl.DateTimeFormat(
+      "en-CA",
+      {
+        timeZone:
+          "Asia/Kolkata",
+
+        year:
+          "numeric",
+
+        month:
+          "2-digit",
+
+        day:
+          "2-digit"
+      }
+    ).formatToParts(now);
+
+
+  const year =
+    parts.find(
+      x => x.type === "year"
+    ).value;
+
+  const month =
+    parts.find(
+      x => x.type === "month"
+    ).value;
+
+  const day =
+    parts.find(
+      x => x.type === "day"
+    ).value;
+
+
+  return `${year}-${month}-${day}`;
+
+}
+
+
+/*
+==================================================
+CURRENT IST TIME
+==================================================
+*/
+
+function getCurrentISTMinutes() {
+
+  const time =
+    new Intl.DateTimeFormat(
+      "en-GB",
+      {
+        timeZone:
+          "Asia/Kolkata",
+
+        hour:
+          "2-digit",
+
+        minute:
+          "2-digit",
+
+        hour12:
+          false
+      }
+    ).format(
+      new Date()
+    );
+
+
+  const [hour, minute] =
+    time.split(":")
+      .map(Number);
+
+
+  return (
+    hour * 60 +
+    minute
+  );
+
+}
+
+
+/*
+==================================================
+EXTRACT "AFTER TIME"
+==================================================
+*/
+
+function extractAfterTime(text) {
+
+  /*
+  ১২টার পর
+  ১২টা পর
+  12টার পর
+  12:00 এর পর
+  12 PM
+  */
+
+  const bengaliNumbers = {
+
+    "০":"0",
+    "১":"1",
+    "২":"2",
+    "৩":"3",
+    "৪":"4",
+    "৫":"5",
+    "৬":"6",
+    "৭":"7",
+    "৮":"8",
+    "৯":"9"
+
+  };
+
+
+  let converted =
+    text.replace(
+      /[০-৯]/g,
+      digit =>
+        bengaliNumbers[digit]
+    );
+
+
+  const match =
+    converted.match(
+      /(\d{1,2})(?::(\d{2}))?\s*(?:টা|টার|টায়|টার পর|টা পর|এর পর|পর|pm|am)?/i
+    );
+
+
+  if (!match) {
+
+    /*
+    If user simply says
+    "আজ ১২টার পর"
+    */
+
+    const simple =
+      converted.match(
+        /(\d{1,2})\s*(?:টার পর|টা পর|এর পর|পর)/i
+      );
+
+    if (simple) {
+
+      return (
+        Number(simple[1]) *
+        60
+      );
+
+    }
+
+    return null;
+
+  }
+
+
+  let hour =
+    Number(match[1]);
+
+  const minute =
+    match[2]
+      ? Number(match[2])
+      : 0;
+
+
+  if (
+    /pm/i.test(match[0]) &&
+    hour < 12
+  ) {
+
+    hour += 12;
+
+  }
+
+
+  return (
+    hour * 60 +
+    minute
+  );
+
+}
+
+
+/*
+==================================================
+RAILRADAR REQUEST
+==================================================
+*/
+
+async function railRadarRequest(
+  path,
+  params = {}
+) {
+
+  if (
+    !RAILRADAR_API_KEY
+  ) {
+
+    throw new Error(
+      "RAILRADAR_API_KEY missing"
+    );
+
+  }
+
+
+  const url =
+    `https://api.railradar.in${path}`;
+
+
+  const response =
+    await axios.get(
+
+      url,
+
+      {
+
+        params,
+
+        headers: {
+
+          Authorization:
+            `Bearer ${RAILRADAR_API_KEY}`
+
+        },
+
+        timeout:
+          20000
+
+      }
+
+    );
+
+
+  return response.data;
+
+}
+
+
+/*
+==================================================
+TRAINS BETWEEN STATIONS
+==================================================
+*/
+
+async function getTrainsBetween(
   source,
   destination,
   date
 ) {
 
-  if (
-    !process.env.RAIL_API_URL ||
-    !process.env.RAIL_API_KEY
-  ) {
-
-    console.log(
-      "Railway API not configured."
-    );
-
-    return null;
-  }
-
   try {
 
-    const response =
-      await axios.get(
-        process.env.RAIL_API_URL,
+    const data =
+      await railRadarRequest(
+
+        `/v1/trains/between/${source}/${destination}`,
+
         {
-          params: {
-            source: source,
-            destination: destination,
-            date: date
-          },
-
-          headers: {
-            Authorization:
-              `Bearer ${process.env.RAIL_API_KEY}`,
-
-            "X-API-Key":
-              process.env.RAIL_API_KEY
-          },
-
-          timeout: 15000
+          date: date,
+          live: "true"
         }
+
       );
 
-    console.log(
-      "Railway API response received"
-    );
 
-    return response.data;
+    return data;
 
   } catch (error) {
 
     console.error(
-      "Railway API Error:",
+      "RailRadar Between Error:",
       error.response?.data ||
       error.message
     );
 
+
     return null;
+
   }
+
 }
 
-/*
-========================================
-FORMAT RAILWAY DATA
-========================================
-*/
-
-function formatTrainData(data) {
-
-  if (!data) {
-    return null;
-  }
-
-  try {
-
-    let trains = [];
-
-    if (Array.isArray(data)) {
-      trains = data;
-    }
-
-    else if (Array.isArray(data.trains)) {
-      trains = data.trains;
-    }
-
-    else if (
-      data.data &&
-      Array.isArray(data.data.trains)
-    ) {
-      trains = data.data.trains;
-    }
-
-    if (trains.length === 0) {
-      return null;
-    }
-
-    let result =
-      "🚆 ট্রেনের তথ্য\n\n";
-
-    trains
-      .slice(0, 20)
-      .forEach((train, index) => {
-
-        const number =
-          train.trainNumber ||
-          train.TrainNo ||
-          train.number ||
-          "";
-
-        const name =
-          train.trainName ||
-          train.TrainName ||
-          train.name ||
-          "";
-
-        const departure =
-          train.departureTime ||
-          train.DepartureTime ||
-          train.departure ||
-          "";
-
-        const arrival =
-          train.arrivalTime ||
-          train.ArrivalTime ||
-          train.arrival ||
-          "";
-
-        result +=
-          `${index + 1}. ${number} ${name}\n`;
-
-        if (departure) {
-          result +=
-            `   ছাড়বে: ${departure}\n`;
-        }
-
-        if (arrival) {
-          result +=
-            `   পৌঁছাবে: ${arrival}\n`;
-        }
-
-        result += "\n";
-      });
-
-    return result;
-
-  } catch (error) {
-
-    console.error(
-      "Format Error:",
-      error
-    );
-
-    return null;
-  }
-}
 
 /*
-========================================
-AI RESPONSE
-========================================
+==================================================
+LIVE TRAIN STATUS
+==================================================
 */
 
-async function generateAIReply(
-  userMessage,
-  railwayData = null
+async function getLiveTrain(
+  trainNumber
 ) {
 
   try {
 
-    let railwayContext = "";
+    const data =
+      await railRadarRequest(
 
-    if (railwayData) {
+        `/v1/trains/${trainNumber}/live`,
 
-      railwayContext = `
+        {
+          authoritative:
+            "true"
+        }
 
-RAILWAY DATA:
+      );
 
-${JSON.stringify(
-  railwayData,
-  null,
-  2
-)}
 
-IMPORTANT:
-Use the railway data above.
-Do not invent train numbers,
-times or running status.
-`;
-    }
-
-    const completion =
-      await groq.chat.completions.create({
-
-        model:
-          "openai/gpt-oss-20b",
-
-        temperature:
-          0.1,
-
-        max_tokens:
-          900,
-
-        messages: [
-
-          {
-            role: "system",
-
-            content: `
-
-তুমি "Sealdah Train Service" WhatsApp AI Assistant।
-
-তোমার কাজ:
-
-1. বাংলা প্রশ্নের উত্তর বাংলায় দেবে।
-2. ইংরেজি প্রশ্নের উত্তর ইংরেজিতে দেবে।
-3. ট্রেন, স্টেশন, route এবং railway information বুঝবে।
-4. ব্যবহারকারী source ও destination দিলে সেটি বুঝবে।
-5. Railway API data দেওয়া থাকলে শুধুমাত্র সেই data ব্যবহার করবে।
-6. Railway API data না থাকলে কোনো train number বা exact time বানিয়ে বলবে না।
-7. Live status আছে বলে মিথ্যা দাবি করবে না।
-8. উত্তর WhatsApp-friendly হবে।
-9. অপ্রয়োজনীয় বড় উত্তর দেবে না।
-10. সময় 24-hour বা পরিষ্কার বাংলা format-এ দেখাবে।
-
-উদাহরণ:
-
-User:
-শান্তিপুর থেকে শিয়ালদা যাওয়ার
-
-তুমি বলবে:
-
-"অবশ্যই 🚆
-শান্তিপুর থেকে শিয়ালদা ট্রেনের তথ্য দিতে পারি।
-আপনি কোন তারিখের এবং কোন সময়ের পরের ট্রেন চান?"
-
-যদি user বলে:
-
-"আজ ১২টার পর"
-
-তাহলে railway data available থাকলে সেই data থেকে
-১২টার পরের trains দেখাবে।
-
-${railwayContext}
-`
-          },
-
-          {
-            role: "user",
-
-            content:
-              userMessage
-          }
-
-        ]
-      });
-
-    return (
-      completion
-        .choices?.[0]
-        ?.message
-        ?.content ||
-
-      "দুঃখিত, এই মুহূর্তে উত্তর দেওয়া যাচ্ছে না।"
-    );
+    return data;
 
   } catch (error) {
 
     console.error(
-      "Groq Error:",
+      "RailRadar Live Error:",
       error.response?.data ||
-      error.message ||
-      error
+      error.message
     );
 
-    return (
-      "দুঃখিত, AI service এই মুহূর্তে ব্যস্ত আছে। কিছুক্ষণ পরে আবার চেষ্টা করুন।"
-    );
+
+    return null;
+
   }
+
 }
 
+
 /*
-========================================
-WHATSAPP WEBHOOK
-========================================
+==================================================
+TRAIN NUMBER DETECTION
+==================================================
+*/
+
+function findTrainNumber(text) {
+
+  const match =
+    text.match(
+      /\b\d{5}\b/
+    );
+
+  if (match) {
+
+    return match[0];
+
+  }
+
+  return null;
+
+}
+
+
+/*
+==================================================
+FORMAT TRAIN RESULTS
+==================================================
+*/
+
+function formatTrains(
+  apiData,
+  afterMinutes = null
+) {
+
+  if (
+    !apiData ||
+    !apiData.success
+  ) {
+
+    return null;
+
+  }
+
+
+  const trains =
+    apiData.data?.trains || [];
+
+
+  if (
+    trains.length === 0
+  ) {
+
+    return null;
+
+  }
+
+
+  let filtered =
+    trains;
+
+
+  if (
+    afterMinutes !== null
+  ) {
+
+    filtered =
+      trains.filter(
+        item => {
+
+          const departure =
+            item.from?.departure;
+
+          if (!departure) {
+            return false;
+          }
+
+
+          const [
+            h,
+            m
+          ] =
+            departure
+              .split(":")
+              .map(Number);
+
+
+          const trainMinutes =
+            h * 60 + m;
+
+
+          return (
+            trainMinutes >
+            afterMinutes
+          );
+
+        }
+      );
+
+  }
+
+
+  if (
+    filtered.length === 0
+  ) {
+
+    return (
+      "🚆 ওই সময়ের পরে এই route-এ কোনো train পাওয়া যায়নি।"
+    );
+
+  }
+
+
+  let message =
+    "🚆 ট্রেনের তথ্য\n\n";
+
+
+  filtered
+    .slice(0, 15)
+    .forEach(
+      (item, index) => {
+
+        const train =
+          item.train || {};
+
+        const from =
+          item.from || {};
+
+        const to =
+          item.to || {};
+
+        const live =
+          item.live || {};
+
+
+        message +=
+          `${index + 1}. ${train.number || ""} ${train.name || ""}\n`;
+
+        message +=
+          `   ছাড়বে: ${from.departure || "--"}\n`;
+
+        message +=
+          `   পৌঁছাবে: ${to.arrival || "--"}\n`;
+
+
+        if (
+          live.delayMinutes !==
+          undefined &&
+          live.delayMinutes !==
+          null
+        ) {
+
+          message +=
+            `   বিলম্ব: ${live.delayMinutes} মিনিট\n`;
+
+        }
+
+
+        if (
+          live.platform
+        ) {
+
+          message +=
+            `   প্ল্যাটফর্ম: ${live.platform}\n`;
+
+        }
+
+
+        message +=
+          "\n";
+
+      }
+    );
+
+
+  return message.trim();
+
+}
+
+
+/*
+==================================================
+FORMAT LIVE STATUS
+==================================================
+*/
+
+function formatLiveStatus(
+  data
+) {
+
+  if (
+    !data ||
+    !data.success
+  ) {
+
+    return null;
+
+  }
+
+
+  const d =
+    data.data;
+
+
+  if (!d) {
+
+    return null;
+
+  }
+
+
+  const train =
+    d.train || {};
+
+
+  const current =
+    d.currentLocation || {};
+
+
+  const next =
+    d.nextHalt || {};
+
+
+  let message =
+    `🚆 ${d.trainNumber || train.number || ""} ${d.trainName || train.name || ""}\n\n`;
+
+
+  message +=
+    `স্ট্যাটাস: ${d.status || "N/A"}\n`;
+
+
+  if (
+    d.delayMinutes !==
+    undefined &&
+    d.delayMinutes !==
+    null
+  ) {
+
+    message +=
+      `বিলম্ব: ${d.delayMinutes} মিনিট\n`;
+
+  }
+
+
+  if (
+    current.stationName
+  ) {
+
+    message +=
+      `বর্তমান অবস্থান: ${current.stationName}\n`;
+
+  }
+
+  else if (
+    current.stationCode
+  ) {
+
+    message +=
+      `বর্তমান স্টেশন: ${current.stationCode}\n`;
+
+  }
+
+
+  if (
+    current.speedKmh
+  ) {
+
+    message +=
+      `গতি: ${current.speedKmh} km/h\n`;
+
+  }
+
+
+  if (
+    next.stationName
+  ) {
+
+    message +=
+      `পরবর্তী স্টেশন: ${next.stationName}\n`;
+
+  }
+
+  else if (
+    next.stationCode
+  ) {
+
+    message +=
+      `পরবর্তী স্টেশন: ${next.stationCode}\n`;
+
+  }
+
+
+  if (
+    current.platform
+  ) {
+
+    message +=
+      `প্ল্যাটফর্ম: ${current.platform}\n`;
+
+  }
+
+
+  if (
+    d.isLive
+  ) {
+
+    message +=
+      "\n🟢 Live data পাওয়া গেছে।";
+
+  }
+
+
+  return message.trim();
+
+}
+
+
+/*
+==================================================
+GEMINI RESPONSE
+==================================================
+*/
+
+async function askGemini(
+  userMessage,
+  railwayContext
+) {
+
+  try {
+
+    const prompt = `
+
+তুমি "Sealdah Train Service" WhatsApp Assistant।
+
+তোমার কাজ হলো Indian Railways সম্পর্কিত
+প্রশ্নের উত্তর দেওয়া।
+
+নিয়ম:
+
+1. ব্যবহারকারীর ভাষা অনুসরণ করবে।
+2. বাংলা প্রশ্ন হলে বাংলা উত্তর দেবে।
+3. ইংরেজি প্রশ্ন হলে ইংরেজি উত্তর দেবে।
+4. Railway data দেওয়া থাকলে সেই data-ই ব্যবহার করবে।
+5. Train number, departure time, arrival time বা live status কখনো নিজের থেকে বানাবে না।
+6. Railway data না থাকলে স্পষ্টভাবে বলবে যে live railway data পাওয়া যায়নি।
+7. খুব সহজ এবং ছোট WhatsApp-friendly উত্তর দেবে।
+8. অপ্রয়োজনীয় explanation দেবে না।
+9. "আমি live railway data ব্যবহার করছি" বলবে শুধুমাত্র সত্যিই API data পাওয়া গেলে।
+10. API data-এর বাইরে কোনো train timing তৈরি করবে না।
+
+ব্যবহারকারীর প্রশ্ন:
+
+${userMessage}
+
+
+Railway API data:
+
+${railwayContext || "NO RAILWAY DATA AVAILABLE"}
+
+এখন ব্যবহারকারীকে উত্তর দাও।
+`;
+
+
+    const result =
+      await geminiModel.generateContent(
+        prompt
+      );
+
+
+    const response =
+      result.response;
+
+
+    return response
+      .text()
+      .trim();
+
+
+  } catch (error) {
+
+    console.error(
+      "Gemini Error:",
+      error.message
+    );
+
+
+    return null;
+
+  }
+
+}
+
+
+/*
+==================================================
+INCOMING WHATSAPP MESSAGE
+==================================================
 */
 
 app.post(
   "/webhook",
   async (req, res) => {
 
-    console.log(
-      "========== NEW WHATSAPP WEBHOOK =========="
-    );
-
     /*
-    IMPORTANT:
-    Reply immediately to WhatsApp.
+    WhatsApp-কে সঙ্গে সঙ্গে 200
     */
 
     res.sendStatus(200);
 
+
     try {
+
+      console.log(
+        "========== NEW WHATSAPP WEBHOOK =========="
+      );
+
 
       const entry =
         req.body?.entry?.[0];
 
+
       const change =
         entry?.changes?.[0];
+
 
       const value =
         change?.value;
 
+
       const messages =
         value?.messages;
 
+
       /*
-      Ignore status updates
+      Ignore status webhook
       */
 
       if (
@@ -677,42 +1265,37 @@ app.post(
         );
 
         return;
+
       }
+
 
       const message =
         messages[0];
 
+
       /*
-      ========================================
-      ACTUAL USER NUMBER
-      ========================================
+      VERY IMPORTANT:
+      Actual sender number
       */
 
       const from =
         message.from;
 
-      /*
-      BUSINESS NUMBER
-      ========================================
-      */
-
-      const businessPhoneNumberId =
-        value?.metadata?.phone_number_id;
 
       console.log(
         "ACTUAL SENDER NUMBER:",
         from
       );
 
+
       console.log(
         "BUSINESS PHONE NUMBER ID:",
-        businessPhoneNumberId
+        value?.metadata?.phone_number_id
       );
 
+
       /*
-      ========================================
-      TEXT ONLY
-      ========================================
+      Text only
       */
 
       if (
@@ -720,32 +1303,95 @@ app.post(
       ) {
 
         await sendWhatsAppMessage(
+
           from,
+
           "দুঃখিত, আপাতত আমি শুধুমাত্র text message গ্রহণ করতে পারি।"
+
         );
 
         return;
+
       }
+
 
       const userMessage =
-        message
-          .text
-          ?.body
-          ?.trim();
+        message.text?.body?.trim();
+
 
       if (!userMessage) {
+
         return;
+
       }
+
 
       console.log(
         "USER MESSAGE:",
         userMessage
       );
 
+
       /*
-      ========================================
+      ==========================================
+      CHECK TRAIN NUMBER
+      ==========================================
+      */
+
+      const trainNumber =
+        findTrainNumber(
+          userMessage
+        );
+
+
+      if (trainNumber) {
+
+        console.log(
+          "TRAIN NUMBER DETECTED:",
+          trainNumber
+        );
+
+
+        const liveData =
+          await getLiveTrain(
+            trainNumber
+          );
+
+
+        if (liveData) {
+
+          const liveMessage =
+            formatLiveStatus(
+              liveData
+            );
+
+
+          if (liveMessage) {
+
+            await sendWhatsAppMessage(
+              from,
+              liveMessage
+            );
+
+
+            console.log(
+              "LIVE TRAIN RESPONSE SENT"
+            );
+
+
+            return;
+
+          }
+
+        }
+
+      }
+
+
+      /*
+      ==========================================
       ROUTE DETECTION
-      ========================================
+      ==========================================
       */
 
       const route =
@@ -753,106 +1399,181 @@ app.post(
           userMessage
         );
 
+
       console.log(
-        "DETECTED SOURCE:",
+        "SOURCE:",
         route.source
       );
 
+
       console.log(
-        "DETECTED DESTINATION:",
+        "DESTINATION:",
         route.destination
       );
 
-      /*
-      ========================================
-      DATE
-      ========================================
-      */
-
-      const today =
-        new Date()
-          .toISOString()
-          .split("T")[0];
 
       /*
-      ========================================
-      RAILWAY DATA
-      ========================================
+      ==========================================
+      TRAIN BETWEEN STATIONS
+      ==========================================
       */
 
-      let railwayData = null;
+      let railwayData =
+        null;
+
+
+      let formattedTrainData =
+        null;
+
 
       if (
         route.source &&
         route.destination
       ) {
 
-        railwayData =
-          await getTrainsBetweenStations(
-            route.source,
-            route.destination,
-            today
+        const date =
+          getTodayIST();
+
+
+        const afterTime =
+          extractAfterTime(
+            userMessage
           );
+
+
+        console.log(
+          "JOURNEY DATE:",
+          date
+        );
+
+
+        console.log(
+          "AFTER TIME:",
+          afterTime
+        );
+
+
+        railwayData =
+          await getTrainsBetween(
+
+            route.source,
+
+            route.destination,
+
+            date
+
+          );
+
+
+        formattedTrainData =
+          formatTrains(
+
+            railwayData,
+
+            afterTime
+
+          );
+
+
+        if (
+          formattedTrainData
+        ) {
+
+          await sendWhatsAppMessage(
+
+            from,
+
+            formattedTrainData
+
+          );
+
+
+          console.log(
+            "TRAIN LIST RESPONSE SENT"
+          );
+
+
+          return;
+
+        }
+
       }
 
+
       /*
-      ========================================
-      AI
-      ========================================
+      ==========================================
+      GEMINI FALLBACK
+      ==========================================
       */
 
-      const reply =
-        await generateAIReply(
+      const aiReply =
+        await askGemini(
+
           userMessage,
-          railwayData
+
+          formattedTrainData ||
+          (
+            railwayData
+              ? JSON.stringify(
+                  railwayData
+                )
+              : null
+          )
+
         );
+
+
+      const finalReply =
+        aiReply ||
+
+        "দুঃখিত, এই মুহূর্তে তথ্য পাওয়া যাচ্ছে না। অনুগ্রহ করে কিছুক্ষণ পরে আবার চেষ্টা করুন।";
+
 
       console.log(
         "AI REPLY:",
-        reply
+        finalReply
       );
 
-      /*
-      ========================================
-      SEND TO SAME USER
-      ========================================
-      */
-
-      console.log(
-        "Sending WhatsApp reply to:",
-        from
-      );
 
       await sendWhatsAppMessage(
+
         from,
-        reply
+
+        finalReply
+
       );
+
 
       console.log(
         "Reply completed for:",
         from
       );
 
+
       console.log(
         "=========================================="
       );
 
+
     } catch (error) {
 
       console.error(
-        "Webhook Error:",
+        "WEBHOOK ERROR:",
         error.response?.data ||
         error.message ||
         error
       );
+
     }
+
   }
 );
 
+
 /*
-========================================
+==================================================
 START SERVER
-========================================
+==================================================
 */
 
 app.listen(
@@ -889,16 +1610,8 @@ app.listen(
     );
 
     console.log(
-      "AI: Groq"
-    );
-
-    console.log(
-      "Model: openai/gpt-oss-20b"
-    );
-
-    console.log(
-      "Groq API Key:",
-      GROQ_API_KEY
+      "Gemini API:",
+      GEMINI_API_KEY
         ? "OK"
         : "MISSING"
     );
@@ -918,15 +1631,16 @@ app.listen(
     );
 
     console.log(
-      "Railway API:",
-      process.env.RAIL_API_URL
-        ? "CONFIGURED"
-        : "NOT CONFIGURED"
+      "RailRadar API:",
+      RAILRADAR_API_KEY
+        ? "OK"
+        : "MISSING"
     );
 
     console.log(
       "================================"
     );
+
   }
 );
 
