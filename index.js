@@ -189,7 +189,7 @@ Answer: বুঝেছি। আপনি ২৯ তারিখ দুপু�
 `;
 
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash-lite",
+      model: "gemini-3.5-flash-lite",
       contents: userMessage,
       config: {
         systemInstruction: systemInstruction,
