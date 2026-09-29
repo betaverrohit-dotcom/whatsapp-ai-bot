@@ -38,7 +38,7 @@ const LANG = {
     mPnr: "🎫 PNR Status", mLive: "📡 Live Train Status", mRoute: "🗺️ Search Trains", mLang: "🌐 Change Language",
     askPnr: "Please type your *10-digit PNR Number* to check the status.\n(e.g., 6508967728)",
     askLive: "Please type the *5-digit Train Number* to check live status.\n(e.g., 31530)",
-    askFrom: "📍 *Departure Station*\nPlease select your starting station from the list below.\n\n_(If your station is not listed, simply type: 'StationA to StationB')_",
+    askFrom: "📍 *Departure Station*\nPlease select your starting station from the list below.\n\n_(If your station is not listed, tap 'Type Manually')_",
     askTo: "🎯 *Destination Station*\nPlease select your destination station.",
     btnSelect: "🔽 Select Station",
     langSet: "Language set to English! ✅\n\n⚠️ *Note:* Train search feature is only for Sealdah suburban (local) trains, not for Mail/Express trains.",
@@ -60,7 +60,7 @@ const LANG = {
     mPnr: "🎫 PNR स्थिति", mLive: "📡 लाइव ट्रेन स्थिति", mRoute: "🗺️ ट्रेन खोजें", mLang: "🌐 भाषा बदलें",
     askPnr: "कृपया अपनी स्थिति जांचने के लिए *10-अंकीय PNR नंबर* टाइप करें।\n(उदा: 6508967728)",
     askLive: "कृपया लाइव स्थिति जांचने के लिए *5-अंकीय ट्रेन नंबर* टाइप करें।\n(उदा: 31530)",
-    askFrom: "📍 *प्रस्थान स्टेशन*\nकृपया नीचे दी गई सूची से अपना स्टेशन चुनें।\n\n_(यदि आपका स्टेशन सूचीबद्ध नहीं है, तो बस टाइप करें: 'StationA to StationB')_",
+    askFrom: "📍 *प्रस्थान स्टेशन*\nकृपया नीचे दी गई सूची से अपना स्टेशन चुनें।\n\n_(यदि आपका स्टेशन सूचीबद्ध नहीं है, तो 'Type Manually' चुनें)_",
     askTo: "🎯 *गंतव्य स्टेशन*\nकृपया अपना गंतव्य स्टेशन चुनें।",
     btnSelect: "🔽 स्टेशन चुनें",
     langSet: "भाषा हिन्दी में सेट कर दी गई है! ✅\n\n⚠️ *नोट:* ट्रेन सर्च सुविधा केवल सियालदह लोकल ट्रेनों के लिए है, मेल/एक्सप्रेस के लिए नहीं।",
@@ -82,7 +82,7 @@ const LANG = {
     mPnr: "🎫 PNR স্ট্যাটাস", mLive: "📡 লাইভ ট্রেনের অবস্থা", mRoute: "🗺️ ট্রেন খুঁজুন", mLang: "🌐 ভাষা পরিবর্তন",
     askPnr: "স্ট্যাটাস চেক করতে অনুগ্রহ করে আপনার *১০-ডিজিটের PNR নম্বরটি* টাইপ করে পাঠান।\n(যেমন: 6508967728)",
     askLive: "লাইভ স্ট্যাটাস দেখতে অনুগ্রহ করে *৫-ডিজিটের ট্রেন নম্বরটি* টাইপ করে পাঠান।\n(যেমন: 31530)",
-    askFrom: "📍 *যাত্রার শুরুর স্টেশন*\nনিচের লিস্ট থেকে আপনি কোথা থেকে যাত্রা শুরু করবেন তা বেছে নিন।\n\n_(আপনার স্টেশন লিস্টে না থাকলে লিখে পাঠান: 'অমুক থেকে অমুক')_",
+    askFrom: "📍 *যাত্রার শুরুর স্টেশন*\nনিচের লিস্ট থেকে আপনি কোথা থেকে যাত্রা শুরু করবেন তা বেছে নিন।\n\n_(আপনার স্টেশন লিস্টে না থাকলে 'Type Manually' অপশনটি বেছে নিন)_",
     askTo: "🎯 *গন্তব্য স্টেশন*\nআপনি কোথায় যেতে চান তা নিচের লিস্ট থেকে বেছে নিন।",
     btnSelect: "🔽 স্টেশন বেছে নিন",
     langSet: "আপনার ভাষা বাংলা সেট করা হয়েছে! ✅\n\n⚠️ *বিশেষ দ্রষ্টব্য:* ট্রেন সার্চ শুধুমাত্র শিয়ালদা লোকাল ট্রেনের জন্য প্রযোজ্য, মেল বা এক্সপ্রেসের জন্য নয়।",
@@ -100,22 +100,6 @@ const LANG = {
 };
 
 /* =========================================================
-   TOP 10 STATIONS FOR DROPDOWN
-========================================================= */
-const TOP_STATIONS = [
-  { id: "stn_SDAH", title: "Sealdah (SDAH)", description: "শিয়ালদা" },
-  { id: "stn_DDJ", title: "Dum Dum Jn (DDJ)", description: "দমদম জংশন" },
-  { id: "stn_BT", title: "Barasat (BT)", description: "বারাসত" },
-  { id: "stn_BNJ", title: "Bongaon (BNJ)", description: "বনগাঁ" },
-  { id: "stn_NH", title: "Naihati (NH)", description: "নৈহাটি" },
-  { id: "stn_KYI", title: "Kalyani (KYI)", description: "কল্যাণী" },
-  { id: "stn_RHA", title: "Ranaghat (RHA)", description: "রানাঘাট" },
-  { id: "stn_KNJ", title: "Krishnanagar (KNJ)", description: "কৃষ্ণনগর" },
-  { id: "stn_STB", title: "Shantipur (STB)", description: "শান্তিপুর" },
-  { id: "stn_BRP", title: "Baruipur (BRP)", description: "বারুইপুর" }
-];
-
-/* =========================================================
    SEND INTERACTIVE MENUS (WhatsApp Cloud API)
 ========================================================= */
 async function sendInteractiveList(to, headerText, bodyText, buttonText, sections) {
@@ -128,7 +112,7 @@ async function sendInteractiveList(to, headerText, bodyText, buttonText, section
         header: { type: "text", text: headerText },
         body: { text: bodyText },
         footer: { text: "Sumanmusix" },
-        action: { button: buttonText.substring(0, 20), sections: sections } // Button text limit safely handled
+        action: { button: buttonText.substring(0, 20), sections: sections } 
       }
     }, { headers: { Authorization: `Bearer ${WHATSAPP_TOKEN}`, "Content-Type": "application/json" } });
   } catch (error) { console.error("Interactive Error:", error.response?.data || error.message); }
@@ -156,13 +140,62 @@ async function sendMainMenu(to, lang) {
   ]);
 }
 
+// WhatsApp Dropdown Limit = 30 Rows max across all sections
 async function sendStationMenu(to, lang, isFrom) {
   const t = LANG[lang];
   const header = isFrom ? "📍 Departure" : "🎯 Destination";
   const body = isFrom ? t.askFrom : t.askTo;
-  await sendInteractiveList(to, header, body, "🔽 Select Station", [
-    { title: "Popular Stations", rows: TOP_STATIONS }
-  ]);
+
+  const sections = [
+    {
+      title: "Main Line",
+      rows: [
+        { id: "stn_SDAH", title: "Sealdah (SDAH)", description: "শিয়ালদা" },
+        { id: "stn_DDJ", title: "Dum Dum (DDJ)", description: "দমদম জংশন" },
+        { id: "stn_BP", title: "Barrackpore (BP)", description: "ব্যারাকপুর" },
+        { id: "stn_NH", title: "Naihati (NH)", description: "নৈহাটি" },
+        { id: "stn_KYI", title: "Kalyani (KYI)", description: "কল্যাণী" },
+        { id: "stn_CDH", title: "Chakdaha (CDH)", description: "চাকদহ" },
+        { id: "stn_RHA", title: "Ranaghat (RHA)", description: "রানাঘাট" },
+        { id: "stn_STB", title: "Shantipur (STB)", description: "শান্তিপুর" },
+        { id: "stn_KNJ", title: "Krishnanagar (KNJ)", description: "কৃষ্ণনগর" },
+        { id: "stn_LGL", title: "Lalgola (LGL)", description: "লালগোলা" }
+      ]
+    },
+    {
+      title: "Bongaon & Hasnabad Line",
+      rows: [
+        { id: "stn_MMG", title: "Madhyamgram (MMG)", description: "মধ্যমগ্রাম" },
+        { id: "stn_BT", title: "Barasat (BT)", description: "বারাসত" },
+        { id: "stn_HB", title: "Habra (HB)", description: "হাবরা" },
+        { id: "stn_GBG", title: "Gobardanga (GBG)", description: "গোবরডাঙ্গা" },
+        { id: "stn_BNJ", title: "Bongaon (BNJ)", description: "বনগাঁ" },
+        { id: "stn_BSHT", title: "Basirhat (BSHT)", description: "বসিরহাট" },
+        { id: "stn_HNB", title: "Hasnabad (HNB)", description: "হাসনাবাদ" }
+      ]
+    },
+    {
+      title: "South Line",
+      rows: [
+        { id: "stn_BLN", title: "Ballygunge (BLN)", description: "বালিগঞ্জ" },
+        { id: "stn_JDP", title: "Jadavpur (JDP)", description: "যাদবপুর" },
+        { id: "stn_SPR", title: "Sonarpur (SPR)", description: "সোনারপুর" },
+        { id: "stn_BRP", title: "Baruipur (BRP)", description: "বারুইপুর" },
+        { id: "stn_DH", title: "Diamond Hbr (DH)", description: "ডায়মন্ড হারবার" },
+        { id: "stn_NMKA", title: "Namkhana (NMKA)", description: "নামখানা" },
+        { id: "stn_CG", title: "Canning (CG)", description: "ক্যানিং" },
+        { id: "stn_BGB", title: "Budge Budge (BGB)", description: "বজবজ" }
+      ]
+    },
+    {
+      title: "Other Stations",
+      rows: [
+        { id: "cmd_type_manual", title: "✍️ Type Manually", description: "অন্য স্টেশন নিজে লিখে খুঁজুন" }
+      ]
+    }
+  ];
+
+  await sendInteractiveList(to, header, body, t.btnSelect, sections);
 }
 
 async function sendWhatsAppMessage(to, text) {
@@ -208,6 +241,60 @@ function findPassengersArray(obj) {
   return [];
 }
 
+const STATIONS = {
+  "শিয়ালদা": "SDAH", "sealdah": "SDAH", "sdah": "SDAH", "বিধাননগর": "BNXR", "bidhannagar": "BNXR",
+  "দমদম": "DDJ", "dumdum": "DDJ", "ddj": "DDJ", "বেলঘড়িয়া": "BLH", "belgharia": "BLH",
+  "আগরপাড়া": "AGP", "agarpara": "AGP", "সোদপুর": "SEP", "sodepur": "SEP",
+  "খড়দহ": "KDH", "khardaha": "KDH", "টিটাগড়": "TGH", "titagarh": "TGH",
+  "ব্যারাকপুর": "BP", "barrackpore": "BP", "পলতা": "PTF", "palta": "PTF",
+  "ইছাপুর": "IP", "ichhapur": "IP", "শ্যামনগর": "SNR", "shyamnagar": "SNR",
+  "জগদ্দল": "JGDL", "jagaddal": "JGDL", "কাঁকিনাড়া": "KNR", "kankinara": "KNR",
+  "নৈহাটি": "NH", "naihati": "NH", "হালিশহর": "HLR", "halisahar": "HLR",
+  "কাঁচরাপাড়া": "KPA", "kanchrapara": "KPA", "কল্যাণী": "KYI", "kalyani": "KYI",
+  "মদনপুর": "MPJ", "madanpur": "MPJ", "শিমুরালি": "SMX", "simurali": "SMX",
+  "পালপাড়া": "PXR", "পালপাড়া": "PXR", "palpara": "PXR", "চাকদহ": "CDH", "chakdaha": "CDH",
+  "পায়রাডাঙ্গা": "PDX", "payradanga": "PDX", "রানাঘাট": "RHA", "ranaghat": "RHA",
+  "কালিনারায়ণপুর": "KLNP", "kalinarayanpur": "KLNP", "হবিবপুর": "HBE", "habibpur": "HBE",
+  "ফুলিয়া": "FLU", "phulia": "FLU", "fulia": "FLU", "শান্তিপুর": "STB", "shantipur": "STB",
+  "বাদকুল্লা": "BDZ", "badkulla": "BDZ", "কৃষ্ণনগর": "KNJ", "krishnanagar": "KNJ",
+  "বেথুয়াডহরি": "BTY", "bethuadahari": "BTY", "বেলডাঙ্গা": "BEB", "beldanga": "BEB",
+  "বহরমপুর": "BPC", "berhampore": "BPC", "মুর্শিদাবাদ": "MBB", "murshidabad": "MBB",
+  "লালগোলা": "LGL", "lalgola": "LGL", "দমদম ক্যান্টনমেন্ট": "DDC", "dum dum cantt": "DDC",
+  "বিরাটি": "BBT", "birati": "BBT", "নিউ ব্যারাকপুর": "NBE", "new barrackpore": "NBE",
+  "মধ্যমগ্রাম": "MMG", "madhyamgram": "MMG", "হৃদয়পুর": "HHR", "hridaypur": "HHR",
+  "বারাসত": "BT", "বারাসাত": "BT", "barasat": "BT", "বামনগাছি": "BMG", "bamangachhi": "BMG",
+  "দত্তপুকুর": "DTK", "dattapukur": "DTK", "অশোকনগর": "ASKR", "ashoknagar": "ASKR",
+  "হাবরা": "HB", "habra": "HB", "মছলন্দপুর": "MSL", "machhalandapur": "MSL",
+  "গোবরডাঙ্গা": "GBG", "gobardanga": "GBG", "ঠাকুরনগর": "TKNR", "thakurnagar": "TKNR",
+  "চাঁদপাড়া": "CDP", "chandpara": "CDP", "বনগাঁ": "BNJ", "bongaon": "BNJ",
+  "বসিরহাট": "BSHT", "basirhat": "BSHT", "হাসনাবাদ": "HNB", "hasnabad": "HNB",
+  "পার্ক সার্কাস": "PQS", "park circus": "PQS", "বালিগঞ্জ": "BLN", "ballygunge": "BLN",
+  "ঢাকুরিয়া": "DHK", "dhakuria": "DHK", "যাদবপুর": "JDP", "jadavpur": "JDP",
+  "বাঘাযতীন": "BGJT", "baghajatin": "BGJT", "নিউ গড়িয়া": "NGRI", "new garia": "NGRI",
+  "গড়িয়া": "GIA", "garia": "GIA", "নরেন্দ্রপুর": "NRPR", "narendrapur": "NRPR",
+  "সোনারপুর": "SPR", "sonarpur": "SPR", "সুভাষ গ্রাম": "MAK", "subhas gram": "MAK",
+  "বারুইপুর": "BRP", "baruipur": "BRP", "ডায়মন্ড হারবার": "DH", "diamond harbour": "DH",
+  "জয়নগর": "JNM", "jaynagar": "JNM", "majilpur": "JNM", "কাকদ্বীপ": "KWDP", "kakdwip": "KWDP",
+  "নামখানা": "NMKA", "namkhana": "NMKA", "ক্যানিং": "CG", "canning": "CG",
+  "মাজেরহাট": "MJT", "majerhat": "MJT", "বজবজ": "BGB", "budge budge": "BGB",
+  "কলকাতা": "KOAA", "kolkata": "KOAA", "হাওড়া": "HWH", "howrah": "HWH"
+};
+
+function findStationCode(text) {
+  const original = text || "";
+  const normalized = cleanText(original);
+  const keys = Object.keys(STATIONS).sort((a, b) => b.length - a.length);
+  for (const key of keys) {
+    if (normalized.includes(cleanText(key))) return STATIONS[key];
+  }
+  const codeMatch = original.match(/\b[A-Za-z]{2,5}\b/);
+  if (codeMatch) {
+    const code = codeMatch[0].toUpperCase();
+    if (Object.values(STATIONS).includes(code)) return code;
+  }
+  return null;
+}
+
 const STATION_COORDS = [
   { name: "শিয়ালদা (Sealdah)", lat: 22.5675, lon: 88.3714, code: "SDAH" },
   { name: "দমদম জংশন (Dum Dum Jn)", lat: 22.6225, lon: 88.3953, code: "DDJ" },
@@ -246,7 +333,7 @@ async function resolveStation(val) {
   } catch(e) { return null; }
 }
 
-async function handleBetween(from, to, userMessage, lang) {
+async function handleBetween(from, to, lang) {
   const date = getISTDate();
   try {
     const result = await railRadarGet(`/v1/trains/between/${from}/${to}`, { date, live: "true" });
@@ -311,6 +398,18 @@ async function handlePNR(pnr, lang) {
   } catch(e) { return LANG[lang].pnrErr; }
 }
 
+function detectDateRegex(text) {
+  const today = getISTDate();
+  const normalized = bengaliToEnglishDigits(text);
+  if (/আজ|আজকে|today/i.test(text) || /\btoday\b/i.test(text)) return today;
+  if (/কাল|আগামীকাল|tomorrow/i.test(text)) {
+    const d = new Date(`${today}T12:00:00+05:30`);
+    d.setDate(d.getDate() + 1);
+    return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit" }).format(d);
+  }
+  return today;
+}
+
 /* =========================================================
    WEBHOOK (THE MAGIC HAPPENS HERE)
 ========================================================= */
@@ -348,7 +447,13 @@ app.post("/webhook", async (req, res) => {
         return; 
       }
       
-      // Route Selection Flow (BUG FIXED HERE!)
+      // Manual Type Request from Dropdown
+      else if (id === "cmd_type_manual") {
+        userState[from] = null;
+        reply = "✍️ *ম্যানুয়াল সার্চ:*\nআপনি যে স্টেশন থেকে যেখানে যেতে চান, তা সরাসরি চ্যাটে লিখে পাঠান।\n\nউদাহরণ:\n👉 *মধ্যমগ্রাম থেকে বারাসত*\n👉 *কল্যাণী থেকে পালপাড়া*\n👉 *নামখানা থেকে শিয়ালদা*";
+      }
+
+      // Station Selection Flow
       else if (id.startsWith("stn_")) {
         const stnCode = id.split("_")[1];
         if (userState[from]?.step === "route_from") {
@@ -359,7 +464,7 @@ app.post("/webhook", async (req, res) => {
         else if (userState[from]?.step === "route_to") {
            const fromStn = userState[from].fromStn;
            userState[from] = null; // Clear state
-           reply = await handleBetween(fromStn, stnCode, "", lang);
+           reply = await handleBetween(fromStn, stnCode, lang);
         }
       }
     } 
@@ -380,9 +485,12 @@ app.post("/webhook", async (req, res) => {
       else if (trainMatch) { userState[from] = null; reply = await handleLive(trainMatch[0], lang); }
       else if (routeMatch) {
          userState[from] = null;
-         let f = await resolveStation(routeMatch[1].trim());
-         let t = await resolveStation(routeMatch[3].trim());
-         if(f && t) reply = await handleBetween(f, t, "", lang);
+         let rawFrom = routeMatch[1].replace(/(যাব|যাওয়ার|যেতে|ট্রেন|কখন|train|going)/gi, "").trim();
+         let rawTo = routeMatch[3].replace(/(যাব|যাওয়ার|যেতে|ট্রেন|কখন|আছে|কি|train|going)/gi, "").trim();
+         let f = await resolveStation(rawFrom);
+         let t = await resolveStation(rawTo);
+         if(f && t) reply = await handleBetween(f, t, lang);
+         else reply = LANG[lang].btnErr;
       }
       else if (userState[from]?.step === "pnr") { reply = LANG[lang].pnrErr; }
       else if (userState[from]?.step === "live") { reply = LANG[lang].liveErr; }
@@ -399,7 +507,7 @@ app.post("/webhook", async (req, res) => {
       const loc = getNearestStation(message.location.latitude, message.location.longitude);
       if (loc.station) {
         reply = `${LANG[lang].locTrack} *${loc.station.name}*.\n\n`;
-        if (loc.station.code !== "SDAH") reply += await handleBetween(loc.station.code, "SDAH", "", lang);
+        if (loc.station.code !== "SDAH") reply += await handleBetween(loc.station.code, "SDAH", lang);
         else reply += LANG[lang].askDest;
       } else reply = LANG[lang].locErr;
     }
@@ -415,7 +523,7 @@ app.get("/webhook", (req, res) => {
 });
 
 /* =========================================================
-   FRONTEND - BEAUTIFUL PREMIUM DASHBOARD (RESTORED & UPGRADED)
+   FRONTEND - BEAUTIFUL PREMIUM DASHBOARD (RESTORED)
 ========================================================= */
 app.get("/", (req, res) => {
   res.send(`
@@ -519,6 +627,7 @@ app.get("/", (req, res) => {
   #map { height: 400px; border-radius: 12px; border: 1px solid var(--border-color); margin-top: 20px; z-index: 1; }
   
   .footer { text-align: center; color: var(--text-muted); margin-top: 50px; font-size: 0.85rem; }
+  .footer a { color: var(--primary); text-decoration: none; }
 </style>
 </head>
 <body>
@@ -531,7 +640,7 @@ app.get("/", (req, res) => {
   </div>
 
   <div class="notice-banner">
-    ⚠️ <b>বিশেষ দ্রষ্টব্য:</b> ট্রেন সার্চের এই ফিচারটি শুধুমাত্র শিয়ালদা ডিভিশনের লোকাল ট্রেনের জন্য প্রযোজ্য, কোনো মেল বা এক্সপ্রেস ট্রেনের জন্য নয়।
+    ⚠️️ <b>বিশেষ দ্রষ্টব্য:</b> ট্রেন সার্চের এই ফিচারটি শুধুমাত্র শিয়ালদা ডিভিশনের লোকাল ট্রেনের জন্য প্রযোজ্য, কোনো মেল বা এক্সপ্রেস ট্রেনের জন্য নয়।
   </div>
 
   <div class="tabs">
@@ -709,7 +818,23 @@ app.get("/api/between", async (req, res) => {
     const to = await resolveStation(toInput);
     if (!from || !to) return res.status(400).json({ error: true, message: "Station not found. Use correct name." });
     
-    res.json({ success: true, message: await handleBetween(from, to, "", "en") });
+    // Website time filtering trigger
+    const result = await railRadarGet(`/v1/trains/between/${from}/${to}`, { date, live: "true" });
+    const trains = result?.data?.trains || result?.trains || [];
+    
+    let minTime = new Date().getHours() * 60 + new Date().getMinutes();
+    let filtered = trains.filter(t => timeToMinutes(t?.from?.departure || t?.departure) >= minTime);
+    
+    if (filtered.length === 0) return res.json({ success: true, message: "🚆 No more trains available today." });
+    
+    let rep = `🚆 *${result?.data?.from?.name || from} ➡ ${result?.data?.to?.name || to}*\n📅 ${date}\n\n`;
+    filtered.forEach((i, idx) => {
+      let t = i.train || {}; let d = i.live?.delayMinutes; let p = i.live?.platform;
+      rep += `*${idx+1}. 🚆 ${t.number||"-"} ${t.name||""}*\n   ⏰ ${formatTime(i.from?.departure||i.departure)} ➡ ${formatTime(i.to?.arrival||i.arrival)}\n`;
+      if(d>0) rep += `   ⏱️ Delay: ${d} mins | 🚉 Plat: ${p||"-"}\n\n`;
+    });
+    
+    res.json({ success: true, message: rep.trim() });
   } catch (error) { res.status(500).json({ error: true, message: "Data unavailable." }); }
 });
 
