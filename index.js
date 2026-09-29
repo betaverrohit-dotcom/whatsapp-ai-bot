@@ -66,41 +66,6 @@ function formatTime(time) {
 }
 
 /* =========================================================
-   OBJECT TO TEXT EXTRACTOR (FIX FOR [object Object])
-========================================================= */
-function extractText(obj) {
-  if (obj === null || obj === undefined) return "-";
-  if (typeof obj === "string") return obj;
-  if (typeof obj === "number") return String(obj);
-  
-  if (typeof obj === "object") {
-    if (Array.isArray(obj)) return obj.map(extractText).join(" / ");
-    
-    if (obj.status) return extractText(obj.status);
-    if (obj.code) return extractText(obj.code);
-    if (obj.text) return extractText(obj.text);
-    if (obj.statusText) return extractText(obj.statusText);
-    if (obj.details) return extractText(obj.details);
-    if (obj.bookingStatusText) return extractText(obj.bookingStatusText);
-    
-    try {
-      const values = Object.values(obj).filter(v => v !== null && v !== undefined && typeof v !== 'object');
-      if (values.length > 0) return values.join(" / ");
-      return Object.values(obj).map(extractText).filter(v => v !== "-").join(" / ") || "-";
-    } catch(e) {
-      return "-";
-    }
-  }
-  return String(obj);
-}
-
-function formatStationValue(value) {
-  if (!value) return "-";
-  if (typeof value === "string") return value;
-  return value.name || value.stationName || value.code || value.stationCode || "-";
-}
-
-/* =========================================================
    STATION ALIASES (For Text Search)
 ========================================================= */
 const STATIONS = {
@@ -345,63 +310,82 @@ async function getPNR(pnr) {
 }
 
 /* =========================================================
-   ADVANCED PNR FORMATTER (BUG FIXED)
+   ULTIMATE PNR FORMATTER (DEEP SEARCH - FINAL FIX)
 ========================================================= */
 function formatPNR(result, pnr) {
-  const data = result?.data || result;
-  if (!data) return `❌ PNR ${pnr}-এর তথ্য পাওয়া যাচ্ছে না।`;
+  // ১. মেইন ডেটা অবজেক্ট বের করা
+  let data = result;
+  if (result && result.data) data = result.data;
+  if (data && data.pnrInfo) data = data.pnrInfo; // IRCTC/RapidAPI Wrap
+  if (data && data.pnr) data = data.pnr; 
 
-  // --- TRAIN INFO ---
-  const tNumber = extractText(data.trainNumber || data.trainNo || data.train?.number || data.train?.trainNumber || "");
-  const tName = extractText(data.trainName || data.name || data.train?.name || data.train?.trainName || "");
-  
-  // --- JOURNEY DATE ---
-  const jDate = extractText(data.journeyDate || data.date || data.jdate || data.doj || data.travelDate || "");
-  
-  // --- ROUTE (From & To) ---
-  let from = extractText(data.boardingStation || data.board || data.fromStation || data.source || data.from || "");
-  let to = extractText(data.reservationUpto || data.toStation || data.destination || data.to || "");
-  
-  if (typeof data.boardingStation === 'object' && data.boardingStation !== null) {
-    from = extractText(data.boardingStation.name || data.boardingStation.code || data.boardingStation.stationName);
-  }
-  if (typeof data.reservationUpto === 'object' && data.reservationUpto !== null) {
-    to = extractText(data.reservationUpto.name || data.reservationUpto.code || data.reservationUpto.stationName);
+  if (!data || Object.keys(data).length === 0) {
+    return `❌ PNR ${pnr}-এর তথ্য সার্ভার থেকে পাওয়া যাচ্ছে না।`;
   }
 
-  // --- EXTRAS ---
-  const boardTime = extractText(data.boardTime || data.departureTime || data.departure || data.trainBoardTime || data.scheduledDeparture || "");
-  const chartStatus = extractText(data.chartStatus || data.chartingStatus || data.chartPrepared || "");
-  const trainClass = extractText(data.journeyClass || data.class || data.trainClass || data.bookingClass || "");
+  // ২. যেকোনো গভীরতা থেকে ডেটা বের করার জন্য সুপার হেল্পার ফাংশন
+  const getVal = (...paths) => {
+    for (const path of paths) {
+      const val = path.split('.').reduce((acc, part) => acc && acc[part], { data });
+      if (val !== undefined && val !== null && val !== "") return val;
+    }
+    return "-";
+  };
+
+  // ৩. ট্রেনের বিস্তারিত তথ্য (Train Details)
+  const tNumber = getVal('data.trainNumber', 'data.trainNo', 'data.train.number', 'data.train.trainNumber', 'data.journeyInfo.trainNo');
+  const tName = getVal('data.trainName', 'data.name', 'data.train.name', 'data.train.trainName', 'data.journeyInfo.trainName');
+  
+  const jDate = getVal('data.journeyDate', 'data.date', 'data.jdate', 'data.doj', 'data.travelDate', 'data.journeyInfo.doj');
+  const boardTime = getVal('data.boardTime', 'data.departureTime', 'data.departure', 'data.trainBoardTime', 'data.boardingInfo.departureTime');
+  const trainClass = getVal('data.journeyClass', 'data.class', 'data.trainClass', 'data.bookingClass', 'data.journeyInfo.journeyClass');
+  const chartStatus = getVal('data.chartStatus', 'data.chartingStatus', 'data.chartPrepared', 'data.chartInfo.status');
+
+  // ৪. রুট (Route)
+  let from = getVal('data.boardingStation.name', 'data.boardingStation.stationName', 'data.boardingStation.code', 'data.boardingInfo.stationName', 'data.boardingInfo.stationCode', 'data.board', 'data.fromStation', 'data.source', 'data.from');
+  let to = getVal('data.reservationUpto.name', 'data.reservationUpto.stationName', 'data.reservationUpto.code', 'data.destinationInfo.stationName', 'data.destinationInfo.stationCode', 'data.toStation', 'data.destination', 'data.to');
 
   let reply = `🎫 *PNR Status*\n━━━━━━━━━━━━━━\n📌 *PNR:* ${pnr}\n`;
-  
-  if (tNumber !== "-" || tName !== "-") reply += `🚆 *ট্রেন:* ${tNumber} ${tName}\n`;
+  if (tNumber !== "-" || tName !== "-") reply += `🚆 *ট্রেন:* ${tNumber !== "-" ? tNumber : ""} ${tName !== "-" ? tName : ""}\n`;
   if (from !== "-" || to !== "-") reply += `🛤️ *রুট:* ${from} ➡ ${to}\n`;
   if (jDate !== "-") reply += `📅 *তারিখ:* ${jDate}\n`;
   if (boardTime !== "-") reply += `⏰ *ছাড়ার সময়:* ${boardTime}\n`;
   if (trainClass !== "-") reply += `💺 *ক্লাস:* ${trainClass}\n`;
   if (chartStatus !== "-") reply += `📋 *চার্ট:* ${chartStatus}\n`;
 
-  // --- PASSENGERS DETAILS (Coach, Seat, Berth, Status) ---
-  const passengers = data.passengers || data.passengerDetails || data.passengerList || data.bookingStatus || [];
+  // ৫. প্যাসেঞ্জার ডেটা প্রসেসিং (Passenger Extraction)
+  const passengers = getVal('data.passengers', 'data.passengerDetails', 'data.passengerList', 'data.bookingStatus', 'data.passengerInfo');
 
   if (Array.isArray(passengers) && passengers.length > 0) {
     reply += "\n👥 *প্যাসেঞ্জার স্ট্যাটাস:*\n";
     
     passengers.forEach((p, i) => {
-      let bStatus = extractText(p.bookingStatus || p.bookingStatusText || p.bookingStatusIndex || p.booking || p.bkgStatus);
-      let cStatus = extractText(p.currentStatus || p.currentStatusText || p.status || p.curStatus);
+      // Booking Status safely
+      let bStatus = p.bookingStatus?.status || p.bookingStatus?.code || p.bookingStatusText || p.bookingStatusIndex || p.bookingInfo?.status || p.bookingStatus || p.bkgStatus || "-";
       
-      let coach = extractText(p.currentCoach || p.coach || p.coachNo || p.currentCoachId || p.bookingCoachId || p.allotCoach);
-      let berth = extractText(p.currentBerthNo || p.berthNo || p.berth || p.seatNo || p.bookingBerthNo || p.allotBerth);
-      let berthType = extractText(p.currentBerthCode || p.berthCode || p.berthType || p.coachPosition);
+      // Current Status safely
+      let cStatus = p.currentStatus?.status || p.currentStatus?.code || p.currentStatusText || p.status || p.currentInfo?.status || p.curStatus || p.currentStatus || "-";
       
-      let passengerInfo = `বুকিং: ${bStatus} | বর্তমান: ${cStatus}`;
+      // Coach, Berth, Type safely
+      let coach = p.currentCoach || p.coach || p.coachNo || p.currentStatus?.coach || p.currentInfo?.coach || p.bookingCoachId || p.allotCoach || "-";
+      let berth = p.currentBerthNo || p.berthNo || p.berth || p.seatNo || p.currentStatus?.berth || p.currentInfo?.berth || p.bookingBerthNo || p.allotBerth || "-";
+      let berthType = p.currentBerthCode || p.berthCode || p.berthType || p.currentStatus?.berthType || p.currentStatus?.berthCode || p.currentInfo?.berthType || p.coachPosition || "";
+      
+      // Object fallback just in case
+      if (typeof bStatus === 'object') bStatus = "-";
+      if (typeof cStatus === 'object') cStatus = "-";
+      if (typeof coach === 'object') coach = "-";
+      if (typeof berth === 'object') berth = "-";
 
-      // যদি কোচ বা সিটের তথ্য থাকে, তবে তা যুক্ত করবে
+      let passengerInfo = `বুকিং: ${bStatus} | বর্তমান: ${cStatus}`;
+      
+      // যদি সিট বা কোচের তথ্য পাওয়া যায়
       if (coach !== "-" || berth !== "-") {
-         passengerInfo = `বুকিং: ${bStatus} | কোচ: ${coach !== "-" ? coach : "N/A"}, সিট: ${berth !== "-" ? berth : "N/A"} ${berthType !== "-" ? "(" + berthType + ")" : ""} [${cStatus}]`;
+         let seatText = [];
+         if (coach !== "-") seatText.push(`কোচ: ${coach}`);
+         if (berth !== "-") seatText.push(`সিট: ${berth}${berthType ? " (" + berthType + ")" : ""}`);
+         
+         passengerInfo = `বুকিং: ${bStatus} | বর্তমান: ${cStatus} [${seatText.join(", ")}]`;
       }
       
       reply += `*${i + 1}.* ${passengerInfo}\n`;
@@ -754,7 +738,6 @@ app.get("/", (req, res) => {
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-  // Set Date automatically
   document.getElementById("route-date").value = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
 
   function switchTab(tabId, btn) {
