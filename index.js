@@ -49,7 +49,6 @@ app.get("/privacy", (req, res) => {
     <body>
       <h1>Sealdah Train Service AI Bot</h1>
       <p>This service processes WhatsApp messages to provide automated replies.</p>
-      <p>Messages are processed only for providing the requested service.</p>
     </body>
     </html>
   `);
@@ -66,14 +65,10 @@ app.get("/webhook", (req, res) => {
   const token = req.query["hub.verify_token"];
   const challenge = req.query["hub.challenge"];
 
-  console.log("Webhook verification request received");
-
   if (mode === "subscribe" && token === VERIFY_TOKEN) {
-    console.log("WhatsApp Webhook Verified Successfully");
+    console.log("WhatsApp Webhook Verified");
     return res.status(200).send(challenge);
   }
-
-  console.log("Webhook verification failed");
 
   return res.sendStatus(403);
 });
@@ -82,46 +77,14 @@ app.get("/webhook", (req, res) => {
 ==================================================
 SEND WHATSAPP MESSAGE
 ==================================================
-
-IMPORTANT:
-
-The "to" number ALWAYS comes from message.from.
-
-Therefore:
-
-User sends message
-        ↓
-message.from
-        ↓
-same WhatsApp number
-        ↓
-AI reply
-
-The PHONE_NUMBER_ID is only used to identify
-the WhatsApp Business number that sends the reply.
-==================================================
 */
 
 async function sendWhatsAppMessage(to, text) {
   try {
-    if (!to) {
-      console.error("ERROR: Recipient number is missing");
-      return;
-    }
-
-    if (!PHONE_NUMBER_ID) {
-      console.error("ERROR: PHONE_NUMBER_ID is missing");
-      return;
-    }
-
     const url =
       `https://graph.facebook.com/v22.0/${PHONE_NUMBER_ID}/messages`;
 
-    console.log("--------------------------------");
-    console.log("SENDING WHATSAPP MESSAGE");
-    console.log("To:", to);
-    console.log("Using Phone Number ID:", PHONE_NUMBER_ID);
-    console.log("--------------------------------");
+    console.log("Sending reply to:", to);
 
     const response = await axios.post(
       url,
@@ -145,8 +108,8 @@ async function sendWhatsAppMessage(to, text) {
     );
 
     console.log(
-      "WhatsApp message sent successfully:",
-      response.data?.messages?.[0]?.id || "OK"
+      "WhatsApp reply sent:",
+      response.data
     );
 
   } catch (error) {
@@ -165,45 +128,44 @@ AI RESPONSE
 
 async function generateAIReply(userMessage) {
   try {
-    const completion = await groq.chat.completions.create({
-      model: "openai/gpt-oss-20b",
-      temperature: 0.2,
-      max_tokens: 700,
+    const completion =
+      await groq.chat.completions.create({
 
-      messages: [
-        {
-          role: "system",
-          content: `
+        model: "openai/gpt-oss-20b",
+
+        temperature: 0.2,
+
+        max_tokens: 700,
+
+        messages: [
+          {
+            role: "system",
+
+            content: `
 তুমি "Sealdah Train Service" WhatsApp AI Assistant।
 
-তোমার কাজ:
+বাংলায় প্রশ্ন করলে সহজ বাংলায় উত্তর দেবে।
 
-1. বাংলা ভাষায় সহজভাবে উত্তর দেবে।
-2. ইংরেজিতে প্রশ্ন করলে ইংরেজিতে উত্তর দেবে।
-3. Hindi-তে প্রশ্ন করলে Hindi-তে উত্তর দেওয়ার চেষ্টা করবে।
-4. Sealdah Division এবং Indian Railways সম্পর্কিত সাধারণ তথ্য দিতে সাহায্য করবে।
-5. Train number, train name, source, destination, station এবং timing সম্পর্কিত প্রশ্ন বুঝতে চেষ্টা করবে।
-6. Live railway data নিশ্চিতভাবে পাওয়া না গেলে কোনো নির্দিষ্ট live time বা live status বানিয়ে বলবে না।
-7. Train-এর live status জানতে হলে train number এবং journey date চাইবে।
-8. Source এবং destination দিলে প্রয়োজনীয় তথ্য পরিষ্কারভাবে জানতে চাইবে।
-9. উত্তর ছোট, পরিষ্কার এবং WhatsApp-friendly হবে।
-10. কোনো তথ্য নিশ্চিত না হলে সেটি অনুমান করে সত্য হিসেবে বলবে না।
+ইংরেজিতে প্রশ্ন করলে ইংরেজিতে উত্তর দেবে।
 
-গুরুত্বপূর্ণ:
+Train number, train name, source, destination,
+station এবং timing সম্পর্কিত প্রশ্ন বুঝতে চেষ্টা করবে।
 
-তোমার কাছে সরাসরি Indian Railways-এর live database নেই।
-তাই live train location বা exact current running status আছে বলে মিথ্যা দাবি করবে না।
+Live railway data তোমার কাছে না থাকলে
+live status বা exact current time বানিয়ে বলবে না।
 
-ব্যবহারকারী যদি সাধারণ train information জানতে চায়,
-তাহলে যতটা সম্ভব সাহায্য করবে।
-          `
-        },
-        {
-          role: "user",
-          content: userMessage
-        }
-      ]
-    });
+Live status জানতে হলে train number এবং journey date চাইবে।
+
+উত্তর ছোট, পরিষ্কার এবং WhatsApp-friendly হবে।
+`
+          },
+
+          {
+            role: "user",
+            content: userMessage
+          }
+        ]
+      });
 
     return (
       completion.choices?.[0]?.message?.content ||
@@ -211,6 +173,7 @@ async function generateAIReply(userMessage) {
     );
 
   } catch (error) {
+
     console.error(
       "Groq Error:",
       error.response?.data || error.message
@@ -229,43 +192,228 @@ WHATSAPP INCOMING MESSAGE
 app.post("/webhook", async (req, res) => {
 
   /*
-  WhatsApp-কে দ্রুত 200 response দেওয়া হচ্ছে।
+  WhatsApp-কে সঙ্গে সঙ্গে 200 response দেওয়া হচ্ছে।
   */
 
   res.sendStatus(200);
 
   try {
 
-    const entry = req.body?.entry?.[0];
-    const changes = entry?.changes?.[0];
-    const value = changes?.value;
+    const value =
+      req.body?.entry?.[0]?.changes?.[0]?.value;
 
     /*
-    Ignore status updates
+    Status update বা অন্য event হলে ignore করবে।
     */
 
-    if (!value?.messages) {
-      console.log("Webhook received without message.");
+    if (!value?.messages?.length) {
+
+      console.log(
+        "Webhook event received without a message."
+      );
+
       return;
     }
 
-    const messages = value.messages;
+    /*
+    Multiple messages থাকলেও process করবে।
+    */
 
-    for (const message of messages) {
+    for (const message of value.messages) {
 
       /*
-      ==============================================
-      MESSAGE INFORMATION
-      ==============================================
+      ==========================================
+      IMPORTANT
+      ==========================================
+
+      message.from = যে WhatsApp number
+      থেকে message এসেছে।
+
+      Reply সবসময় এই number-এই যাবে।
       */
 
       const from = message?.from;
 
-      const incomingPhoneNumberId =
-        value?.metadata?.phone_number_id;
-
-      const displayPhoneNumber =
-        value?.metadata?.display_phone_number;
-
       console.log("");
       console.log("================================");
+      console.log("WHATSAPP MESSAGE RECEIVED");
+      console.log("================================");
+
+      console.log(
+        "From:",
+        from
+      );
+
+      console.log(
+        "Incoming Phone Number ID:",
+        value?.metadata?.phone_number_id || "N/A"
+      );
+
+      console.log(
+        "Business Display Number:",
+        value?.metadata?.display_phone_number || "N/A"
+      );
+
+      console.log(
+        "Configured Phone Number ID:",
+        PHONE_NUMBER_ID || "MISSING"
+      );
+
+      console.log(
+        "Message Type:",
+        message?.type
+      );
+
+      /*
+      ==========================================
+      CHECK SENDER
+      ==========================================
+      */
+
+      if (!from) {
+
+        console.log(
+          "Sender number missing."
+        );
+
+        continue;
+      }
+
+      /*
+      ==========================================
+      ONLY TEXT MESSAGE
+      ==========================================
+      */
+
+      if (message.type !== "text") {
+
+        await sendWhatsAppMessage(
+          from,
+          "দুঃখিত, আপাতত আমি শুধুমাত্র text message গ্রহণ করতে পারি।"
+        );
+
+        continue;
+      }
+
+      /*
+      ==========================================
+      GET USER MESSAGE
+      ==========================================
+      */
+
+      const userMessage =
+        message?.text?.body?.trim();
+
+      if (!userMessage) {
+        continue;
+      }
+
+      console.log(
+        "User Message:",
+        userMessage
+      );
+
+      /*
+      ==========================================
+      GENERATE AI REPLY
+      ==========================================
+      */
+
+      const reply =
+        await generateAIReply(userMessage);
+
+      console.log(
+        "AI Reply:",
+        reply
+      );
+
+      /*
+      ==========================================
+      SEND TO SAME USER
+      ==========================================
+      */
+
+      await sendWhatsAppMessage(
+        from,
+        reply
+      );
+
+      console.log(
+        "REPLY SENT TO SAME NUMBER:",
+        from
+      );
+
+      console.log(
+        "================================"
+      );
+      console.log("");
+    }
+
+  } catch (error) {
+
+    console.error(
+      "Webhook Error:",
+      error.response?.data ||
+      error.message ||
+      error
+    );
+  }
+});
+
+/*
+==================================================
+START SERVER
+==================================================
+*/
+
+app.listen(PORT, () => {
+
+  console.log(
+    "================================"
+  );
+
+  console.log(
+    "Sealdah Train Service AI Bot"
+  );
+
+  console.log(
+    "================================"
+  );
+
+  console.log(
+    "Server running on port:",
+    PORT
+  );
+
+  console.log(
+    "Health: /api"
+  );
+
+  console.log(
+    "Webhook: /webhook"
+  );
+
+  console.log(
+    "Privacy: /privacy"
+  );
+
+  console.log(
+    "Groq API Key:",
+    GROQ_API_KEY ? "OK" : "MISSING"
+  );
+
+  console.log(
+    "WhatsApp Token:",
+    WHATSAPP_TOKEN ? "OK" : "MISSING"
+  );
+
+  console.log(
+    "Phone Number ID:",
+    PHONE_NUMBER_ID ? "OK" : "MISSING"
+  );
+
+  console.log(
+    "================================"
+  );
+});
+
