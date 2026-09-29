@@ -65,25 +65,6 @@ function formatTime(time) {
   return `${match[1].padStart(2, "0")}:${match[2]}`;
 }
 
-// এই ফাংশনটি অবজেক্টকে টেক্সটে কনভার্ট করবে যাতে আর [object Object] না দেখায়
-function extractText(obj) {
-  if (obj === null || obj === undefined) return "-";
-  if (typeof obj === "string") return obj;
-  if (typeof obj === "object") {
-    if (Array.isArray(obj)) return obj.join(" / ");
-    if (obj.status) return obj.status;
-    if (obj.code) return obj.code;
-    if (obj.text) return obj.text;
-    if (obj.statusText) return obj.statusText;
-    try {
-      return Object.values(obj).filter(v => v && typeof v !== 'object').join(" / ");
-    } catch(e) {
-      return "-";
-    }
-  }
-  return String(obj);
-}
-
 /* =========================================================
    STATION ALIASES (For Text Search)
 ========================================================= */
@@ -328,73 +309,71 @@ async function getPNR(pnr) {
   return await railRadarGet(`/v1/pnr/${encodeURIComponent(pnr)}`);
 }
 
-function findValue(obj, keys) {
-  if (!obj || typeof obj !== "object") return null;
-  for (const key of keys) {
-    if (obj[key] !== undefined && obj[key] !== null && obj[key] !== "") return obj[key];
-  }
-  return null;
-}
-
-function formatStationValue(value) {
-  if (!value) return "-";
-  if (typeof value === "string") return value;
-  return value.name || value.stationName || value.code || value.stationCode || "-";
-}
-
 /* =========================================================
-   PNR BUG FIX & ENHANCED FORMATTING
+   NEW POWERFUL PNR FORMATTER (BUG FIXED)
 ========================================================= */
 function formatPNR(result, pnr) {
   const data = result?.data || result;
   if (!data) return `❌ PNR ${pnr}-এর তথ্য পাওয়া যায়নি।`;
 
-  const trainNumber = findValue(data, ["trainNumber", "trainNo", "number"]);
-  const trainName = findValue(data, ["trainName", "name"]);
-  const journeyDate = findValue(data, ["journeyDate", "date", "jdate", "doj"]);
+  // --- TRAIN INFO --- (যেখানে খুশি লুকানো থাকুক, বের করে আনবে)
+  const tNumber = data.trainNumber || data.trainNo || data.train?.number || data.train?.trainNumber || "";
+  const tName = data.trainName || data.name || data.train?.name || data.train?.trainName || "";
   
-  const from = findValue(data, ["boardingStation", "board", "from", "fromStation", "source"]);
-  const to = findValue(data, ["reservationUpto", "to", "toStation", "destination"]);
+  // --- ROUTE & DATE ---
+  const jDate = data.journeyDate || data.date || data.jdate || data.doj || "";
   
-  const boardTime = findValue(data, ["boardTime", "departureTime", "departure", "trainBoardTime"]);
-  const chartStatus = findValue(data, ["chartStatus", "chartingStatus"]);
-  const trainClass = findValue(data, ["journeyClass", "class"]);
-  const passengers = data.passengers || data.passengerDetails || data.bookingStatus || [];
+  const fromObj = data.boardingStation || data.board || data.fromStation || data.source || {};
+  const from = typeof fromObj === 'string' ? fromObj : (fromObj.name || fromObj.code || data.from || "");
+  
+  const toObj = data.reservationUpto || data.toStation || data.destination || {};
+  const to = typeof toObj === 'string' ? toObj : (toObj.name || toObj.code || data.to || "");
+  
+  // --- EXTRAS ---
+  const boardTime = data.boardTime || data.departureTime || data.departure || data.trainBoardTime || "";
+  const chartStatus = data.chartStatus || data.chartingStatus || data.chartPrepared || "";
+  const trainClass = data.journeyClass || data.class || data.trainClass || "";
 
-  let reply = `🎫 *PNR Status*\n━━━━━━━━━━━━━━\n`;
-  reply += `📌 *PNR:* ${pnr}\n`;
+  let reply = `🎫 *PNR Status*\n━━━━━━━━━━━━━━\n📌 *PNR:* ${pnr}\n`;
   
-  if (trainNumber || trainName) reply += `🚆 *ট্রেন:* ${trainNumber || ""} ${trainName || ""}\n`;
-  if (from || to) reply += `🛤️ *রুট:* ${formatStationValue(from)} ➡ ${formatStationValue(to)}\n`;
-  if (journeyDate) reply += `📅 *তারিখ:* ${journeyDate}\n`;
+  if (tNumber || tName) reply += `🚆 *ট্রেন:* ${tNumber} ${tName}\n`;
+  if (from || to) reply += `🛤️ *রুট:* ${from} ➡ ${to}\n`;
+  if (jDate) reply += `📅 *তারিখ:* ${jDate}\n`;
   if (boardTime) reply += `⏰ *ছাড়ার সময়:* ${boardTime}\n`;
   if (trainClass) reply += `💺 *ক্লাস:* ${trainClass}\n`;
   if (chartStatus) reply += `📋 *চার্ট:* ${chartStatus}\n`;
+
+  // --- PASSENGERS ---
+  const passengers = data.passengers || data.passengerDetails || data.passengerList || data.bookingStatus || [];
 
   if (Array.isArray(passengers) && passengers.length > 0) {
     reply += "\n👥 *প্যাসেঞ্জার স্ট্যাটাস:*\n";
     
     passengers.forEach((p, i) => {
-      let bStatus = extractText(findValue(p, ["bookingStatus", "booking", "bookingStatusText"]));
-      let cStatus = extractText(findValue(p, ["currentStatus", "current", "currentStatusText", "status"]));
+      let bStatus = p.bookingStatus || p.bookingStatusText || p.bookingStatusIndex || p.booking || "";
+      let cStatus = p.currentStatus || p.currentStatusText || p.status || "";
       
-      let coach = p.currentCoach || p.coach || (typeof p.currentStatus === 'object' ? p.currentStatus.coach : null) || "-";
-      let berth = p.currentBerthNo || p.berthNo || p.berth || (typeof p.currentStatus === 'object' ? p.currentStatus.berth : null) || "-";
+      let coach = p.currentCoach || p.coach || p.coachNo || p.currentCoachId || p.bookingCoachId || "";
+      let berth = p.currentBerthNo || p.berthNo || p.berth || p.seatNo || p.bookingBerthNo || "";
       let berthType = p.currentBerthCode || p.berthCode || p.berthType || "";
       
-      let display = cStatus;
-
-      // যদি সিট এবং কোচ নম্বর থাকে তবে সুন্দর করে সাজাবে
-      if (coach !== "-" && berth !== "-") {
-         display = `কোচ: ${coach} | সিট: ${berth} ${berthType} (${cStatus})`;
-      } else {
-         // ওয়েটিং বা RAC হলে যা আছে তাই দেখাবে
-         display = cStatus;
-      }
+      let cIndex = p.currentStatusIndex || p.currentStatusDetails || "";
       
-      reply += `*${i + 1}.* বুকিং: ${bStatus} | বর্তমান: ${display}\n`;
+      let displayCurrent = cStatus;
+
+      // যদি API-তে কোচ এবং বার্থ আলাদা থাকে
+      if (coach && berth && coach !== "-" && berth !== "-") {
+         displayCurrent = `${cStatus} (কোচ: ${coach}, সিট: ${berth} ${berthType})`;
+      } 
+      // যদি সিট নাম্বারগুলো টেক্সটের মাঝে লুকানো থাকে
+      else if (cIndex && cIndex !== cStatus) {
+         displayCurrent = `${cStatus} [${cIndex}]`;
+      }
+
+      reply += `*${i + 1}.* বুকিং: ${bStatus} | বর্তমান: ${displayCurrent}\n`;
     });
   }
+
   return reply.trim();
 }
 
