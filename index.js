@@ -2,7 +2,6 @@ require("dotenv").config();
 
 const express = require("express");
 const axios = require("axios");
-const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 const app = express();
 
@@ -10,114 +9,113 @@ app.use(express.json());
 
 const PORT = process.env.PORT || 10000;
 
-const WHATSAPP_TOKEN =
-  process.env.WHATSAPP_TOKEN;
-
-const PHONE_NUMBER_ID =
-  process.env.PHONE_NUMBER_ID;
-
-const VERIFY_TOKEN =
-  process.env.VERIFY_TOKEN;
-
-const GEMINI_API_KEY =
-  process.env.GEMINI_API_KEY;
-
-const RAILRADAR_API_KEY =
-  process.env.RAILRADAR_API_KEY;
-
-
 /*
 ==================================================
-GEMINI
+ENVIRONMENT VARIABLES
 ==================================================
 */
 
-const genAI =
-  new GoogleGenerativeAI(
-    GEMINI_API_KEY
-  );
+const WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN;
+const PHONE_NUMBER_ID = process.env.PHONE_NUMBER_ID;
+const VERIFY_TOKEN = process.env.VERIFY_TOKEN;
 
-const geminiModel =
-  genAI.getGenerativeModel({
-    model: "gemini-2.5-flash"
-  });
-
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const RAILRADAR_API_KEY = process.env.RAILRADAR_API_KEY;
 
 /*
 ==================================================
-STATION DATABASE
+CONFIG
 ==================================================
 */
 
-const STATIONS = {
+const GEMINI_MODEL = "gemini-3.8-flash";
+
+const RAILRADAR_BASE =
+  "https://api.railradar.in/v1";
+
+/*
+==================================================
+STATION ALIASES
+==================================================
+*/
+
+const STATION_ALIASES = {
 
   "শান্তিপুর": "STB",
   "শান্তিপুর জংশন": "STB",
-  "শান্তিপুর স্টেশন": "STB",
-  "santipur": "STB",
-  "santipur junction": "STB",
+  "shantipur": "STB",
+  "shantipur junction": "STB",
+  "STB": "STB",
 
   "শিয়ালদহ": "SDAH",
-  "শিয়ালদা": "SDAH",
   "শিয়ালদহ": "SDAH",
-  "শিয়ালদা": "SDAH",
   "sealdah": "SDAH",
+  "SDAH": "SDAH",
 
   "রানাঘাট": "RHA",
-  "রানাঘাট জংশন": "RHA",
   "ranaghat": "RHA",
+  "RHA": "RHA",
 
   "কৃষ্ণনগর": "KNJ",
-  "কৃষ্ণনগর সিটি": "KNJ",
   "krishnanagar": "KNJ",
-
-  "নৈহাটি": "NH",
-  "naihati": "NH",
+  "KNJ": "KNJ",
 
   "কল্যাণী": "KYI",
   "kalyani": "KYI",
+  "KYI": "KYI",
 
-  "বারাসাত": "BT",
-  "barasat": "BT",
+  "চাকদহ": "CDH",
+  "chakdaha": "CDH",
+  "CDH": "CDH",
+
+  "নৈহাটি": "NH",
+  "naihati": "NH",
+  "NH": "NH",
 
   "দমদম": "DDJ",
   "dum dum": "DDJ",
-
-  "কলকাতা": "KOAA",
-  "কলকাতা স্টেশন": "KOAA",
-  "kolkata": "KOAA"
+  "dumdum": "DDJ",
+  "DDJ": "DDJ"
 };
-
 
 /*
 ==================================================
-HOME
+HEALTH CHECK
 ==================================================
 */
 
 app.get("/", (req, res) => {
 
-  res.status(200).send(`
-    <!DOCTYPE html>
+  res.send(`
     <html>
       <head>
         <title>Sealdah Train Service AI Bot</title>
       </head>
 
-      <body>
+      <body style="
+        font-family: Arial;
+        background:#f5f5f5;
+        padding:40px;
+      ">
 
         <h1>🚆 Sealdah Train Service AI Bot</h1>
 
         <p>Bot is running successfully.</p>
 
         <p>
-          WhatsApp Webhook:
-          /webhook
+          <b>WhatsApp:</b> Connected
         </p>
 
         <p>
-          Health:
-          /api
+          <b>AI:</b> Gemini
+        </p>
+
+        <p>
+          <b>Railway Data:</b> RailRadar
+        </p>
+
+        <p>
+          <b>Status:</b> Online
         </p>
 
       </body>
@@ -126,12 +124,6 @@ app.get("/", (req, res) => {
 
 });
 
-
-/*
-==================================================
-HEALTH
-==================================================
-*/
 
 app.get("/api", (req, res) => {
 
@@ -142,21 +134,25 @@ app.get("/api", (req, res) => {
     service:
       "Sealdah Train Service AI Bot",
 
-    whatsapp:
-      WHATSAPP_TOKEN &&
-      PHONE_NUMBER_ID
-        ? "OK"
-        : "MISSING",
-
-    gemini:
+    ai:
       GEMINI_API_KEY
-        ? "OK"
-        : "MISSING",
+        ? "Gemini configured"
+        : "Gemini API key missing",
 
     railway:
       RAILRADAR_API_KEY
-        ? "OK"
-        : "MISSING"
+        ? "RailRadar configured"
+        : "RailRadar API key missing",
+
+    whatsapp:
+      WHATSAPP_TOKEN
+        ? "WhatsApp configured"
+        : "WhatsApp token missing",
+
+    phoneNumberId:
+      PHONE_NUMBER_ID
+        ? "Configured"
+        : "Missing"
 
   });
 
@@ -165,7 +161,7 @@ app.get("/api", (req, res) => {
 
 /*
 ==================================================
-PRIVACY
+PRIVACY PAGE
 ==================================================
 */
 
@@ -178,23 +174,29 @@ app.get("/privacy", (req, res) => {
         <title>Privacy Policy</title>
       </head>
 
-      <body>
+      <body style="
+        font-family:Arial;
+        max-width:800px;
+        margin:40px auto;
+        line-height:1.6;
+      ">
 
-        <h1>
-          Sealdah Train Service AI Bot
-        </h1>
+        <h1>Privacy Policy</h1>
 
         <p>
-          This service processes WhatsApp
-          messages to provide railway
-          information and automated
-          assistance.
+          Sealdah Train Service AI Bot processes
+          WhatsApp messages to provide railway
+          information and automated assistance.
         </p>
 
         <p>
-          Messages may be processed by
-          configured AI and railway
-          information services.
+          Messages are processed only for providing
+          the requested service.
+        </p>
+
+        <p>
+          Railway information is retrieved from
+          third-party railway data services.
         </p>
 
       </body>
@@ -222,7 +224,6 @@ app.get("/webhook", (req, res) => {
   const challenge =
     req.query["hub.challenge"];
 
-
   if (
     mode === "subscribe" &&
     token === VERIFY_TOKEN
@@ -237,7 +238,6 @@ app.get("/webhook", (req, res) => {
       .send(challenge);
 
   }
-
 
   return res.sendStatus(403);
 
@@ -260,14 +260,12 @@ async function sendWhatsAppMessage(
     const url =
       `https://graph.facebook.com/v22.0/${PHONE_NUMBER_ID}/messages`;
 
-
     const response =
       await axios.post(
 
         url,
 
         {
-
           messaging_product:
             "whatsapp",
 
@@ -307,23 +305,24 @@ async function sendWhatsAppMessage(
 
       );
 
-
     console.log(
       "WhatsApp message sent successfully:",
-      to
+      response.data?.messages?.[0]?.id || "OK"
     );
 
+    return true;
 
-    return response.data;
+  }
 
-
-  } catch (error) {
+  catch (error) {
 
     console.error(
       "WhatsApp Send Error:",
       error.response?.data ||
       error.message
     );
+
+    return false;
 
   }
 
@@ -332,35 +331,184 @@ async function sendWhatsAppMessage(
 
 /*
 ==================================================
-FIND STATION CODE
+GEMINI AI
 ==================================================
 */
 
-function findStationCode(text) {
+async function askGemini(
+  userMessage
+) {
 
-  if (!text) {
+  if (!GEMINI_API_KEY) {
+
+    console.error(
+      "GEMINI_API_KEY is missing"
+    );
+
+    return null;
+
+  }
+
+  try {
+
+    const url =
+      `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
+
+    const response =
+      await axios.post(
+
+        url,
+
+        {
+
+          systemInstruction: {
+
+            parts: [
+
+              {
+
+                text: `
+তুমি "Sealdah Train Service" WhatsApp Assistant।
+
+তোমার কাজ:
+
+1. ব্যবহারকারীর প্রশ্ন বুঝতে সাহায্য করা।
+2. বাংলা প্রশ্নের উত্তর বাংলায় দেওয়া।
+3. ইংরেজি প্রশ্নের উত্তর ইংরেজিতে দেওয়া।
+4. Railway related প্রশ্নে পরিষ্কার এবং ছোট উত্তর দেওয়া।
+5. কোনো train timing, live status বা railway তথ্য নিজে থেকে বানানো যাবে না।
+6. Railway data পাওয়া গেলে শুধুমাত্র সেই data ব্যবহার করবে।
+7. ব্যবহারকারী "আজ", "কাল", "২৯ তারিখ", "বারোটার পর" ইত্যাদি বললে context বুঝতে চেষ্টা করবে।
+8. Live status-এর ক্ষেত্রে API data ছাড়া কোনো দাবি করবে না।
+9. WhatsApp-friendly উত্তর দেবে।
+10. অপ্রয়োজনীয় বড় উত্তর দেবে না।
+
+খুব গুরুত্বপূর্ণ:
+
+তুমি নিজে কোনো live railway database নও।
+Railway API থেকে data না পাওয়া গেলে সেটা পরিষ্কারভাবে বলবে।
+কখনো অনুমান করে train number বা timing তৈরি করবে না।
+                `
+
+              }
+
+            ]
+
+          },
+
+          contents: [
+
+            {
+
+              role:
+                "user",
+
+              parts: [
+
+                {
+
+                  text:
+                    userMessage
+
+                }
+
+              ]
+
+            }
+
+          ],
+
+          generationConfig: {
+
+            temperature:
+              0.2,
+
+            maxOutputTokens:
+              500
+
+          }
+
+        },
+
+        {
+
+          headers: {
+
+            "Content-Type":
+              "application/json"
+
+          },
+
+          timeout:
+            30000
+
+        }
+
+      );
+
+
+    const text =
+      response
+        .data
+        ?.candidates?.[0]
+        ?.content
+        ?.parts
+        ?.map(
+          part => part.text || ""
+        )
+        .join("")
+        .trim();
+
+
+    if (!text) {
+
+      return null;
+
+    }
+
+    return text;
+
+  }
+
+  catch (error) {
+
+    console.error(
+      "Gemini Error:",
+      error.response?.data ||
+      error.message
+    );
+
+    return null;
+
+  }
+
+}
+
+
+/*
+==================================================
+NORMALIZE STATION
+==================================================
+*/
+
+function normalizeStation(
+  value
+) {
+
+  if (!value) {
     return null;
   }
 
-  const lower =
-    text.toLowerCase();
+  const clean =
+    value
+      .trim()
+      .toLowerCase();
 
-  for (
-    const stationName
-    of Object.keys(STATIONS)
+  if (
+    STATION_ALIASES[clean]
   ) {
 
-    if (
-      lower.includes(
-        stationName.toLowerCase()
-      )
-    ) {
-
-      return STATIONS[
-        stationName
-      ];
-
-    }
+    return STATION_ALIASES[clean];
 
   }
 
@@ -371,113 +519,186 @@ function findStationCode(text) {
 
 /*
 ==================================================
-DETECT ROUTE
+EXTRACT STATIONS
 ==================================================
 */
 
-function detectRoute(text) {
-
-  let source = null;
-  let destination = null;
-
-
-  /*
-  Bengali direct routes
-  */
-
-  if (
-    text.includes("শান্তিপুর") &&
-    (
-      text.includes("শিয়ালদহ") ||
-      text.includes("শিয়ালদা") ||
-      text.includes("শিয়ালদহ") ||
-      text.includes("শিয়ালদা")
-    )
-  ) {
-
-    source = "STB";
-    destination = "SDAH";
-
-  }
-
-
-  if (
-    text.includes("রানাঘাট") &&
-    (
-      text.includes("শিয়ালদহ") ||
-      text.includes("শিয়ালদা") ||
-      text.includes("শিয়ালদহ") ||
-      text.includes("শিয়ালদা")
-    )
-  ) {
-
-    source = "RHA";
-    destination = "SDAH";
-
-  }
-
-
-  /*
-  English
-  */
+function detectStations(
+  message
+) {
 
   const lower =
-    text.toLowerCase();
+    message.toLowerCase();
 
-  if (
-    lower.includes("santipur") &&
-    lower.includes("sealdah")
-  ) {
-
-    source = "STB";
-    destination = "SDAH";
-
-  }
-
-
-  if (
-    lower.includes("ranaghat") &&
-    lower.includes("sealdah")
-  ) {
-
-    source = "RHA";
-    destination = "SDAH";
-
-  }
-
+  let from = null;
+  let to = null;
 
   /*
-  Generic "থেকে"
+  বাংলা / English "থেকে / থেকে"
   */
 
-  const fromMatch =
-    text.match(
-      /(.+?)\s+থেকে\s+(.+?)(?:\s+যাওয়া|\s+যাওয়ার|\s+যাওয়ার|\s+যাব|\s*$)/i
-    );
-
-
-  if (
-    fromMatch &&
-    !source &&
-    !destination
+  for (
+    const name in STATION_ALIASES
   ) {
 
-    source =
-      findStationCode(
-        fromMatch[1]
+    const code =
+      STATION_ALIASES[name];
+
+    const escaped =
+      name.replace(
+        /[.*+?^${}()|[\]\\]/g,
+        "\\$&"
       );
 
-    destination =
-      findStationCode(
-        fromMatch[2]
+    const fromRegex =
+      new RegExp(
+        escaped +
+        "\\s*(থেকে|theke|from)"
       );
+
+    const toRegex =
+      new RegExp(
+        "(যাওয়ার|যাওয়ার|যেতে|to|towards|দিকে)?\\s*" +
+        escaped
+      );
+
+    if (
+      !from &&
+      fromRegex.test(lower)
+    ) {
+
+      from = code;
+
+    }
 
   }
 
+  /*
+  বিশেষভাবে station pair detect
+  */
+
+  const stationMatches = [];
+
+  for (
+    const name in STATION_ALIASES
+  ) {
+
+    if (
+      lower.includes(
+        name.toLowerCase()
+      )
+    ) {
+
+      if (
+        !stationMatches.includes(
+          STATION_ALIASES[name]
+        )
+      ) {
+
+        stationMatches.push(
+          STATION_ALIASES[name]
+        );
+
+      }
+
+    }
+
+  }
+
+  if (
+    stationMatches.length >= 2
+  ) {
+
+    if (!from) {
+
+      from =
+        stationMatches[0];
+
+    }
+
+    if (!to) {
+
+      to =
+        stationMatches[1];
+
+    }
+
+  }
+
+  /*
+  যদি "X থেকে Y" থাকে,
+  প্রথম station = from,
+  দ্বিতীয় station = to
+  */
+
+  const fromIndex =
+    lower.indexOf("থেকে");
+
+  if (
+    fromIndex >= 0 &&
+    stationMatches.length >= 2
+  ) {
+
+    const before =
+      lower.substring(
+        0,
+        fromIndex
+      );
+
+    const after =
+      lower.substring(
+        fromIndex + 5
+      );
+
+    for (
+      const code of stationMatches
+    ) {
+
+      const foundName =
+        Object.keys(
+          STATION_ALIASES
+        ).find(
+          key =>
+            STATION_ALIASES[key] ===
+            code &&
+            before.includes(
+              key.toLowerCase()
+            )
+        );
+
+      if (foundName) {
+
+        from =
+          code;
+
+        break;
+
+      }
+
+    }
+
+    for (
+      const code of stationMatches
+    ) {
+
+      if (
+        code !== from
+      ) {
+
+        to =
+          code;
+
+        break;
+
+      }
+
+    }
+
+  }
 
   return {
-    source,
-    destination
+    from,
+    to
   };
 
 }
@@ -485,7 +706,7 @@ function detectRoute(text) {
 
 /*
 ==================================================
-GET TODAY IST
+DATE HELPERS
 ==================================================
 */
 
@@ -512,165 +733,359 @@ function getTodayIST() {
       }
     ).formatToParts(now);
 
+  const map = {};
 
-  const year =
-    parts.find(
-      x => x.type === "year"
-    ).value;
+  for (
+    const part of parts
+  ) {
 
-  const month =
-    parts.find(
-      x => x.type === "month"
-    ).value;
+    map[part.type] =
+      part.value;
 
-  const day =
-    parts.find(
-      x => x.type === "day"
-    ).value;
+  }
 
-
-  return `${year}-${month}-${day}`;
+  return `${map.year}-${map.month}-${map.day}`;
 
 }
 
 
-/*
-==================================================
-CURRENT IST TIME
-==================================================
-*/
+function parseDate(
+  message
+) {
 
-function getCurrentISTMinutes() {
-
-  const time =
-    new Intl.DateTimeFormat(
-      "en-GB",
-      {
-        timeZone:
-          "Asia/Kolkata",
-
-        hour:
-          "2-digit",
-
-        minute:
-          "2-digit",
-
-        hour12:
-          false
-      }
-    ).format(
-      new Date()
-    );
-
-
-  const [hour, minute] =
-    time.split(":")
-      .map(Number);
-
-
-  return (
-    hour * 60 +
-    minute
-  );
-
-}
-
-
-/*
-==================================================
-EXTRACT "AFTER TIME"
-==================================================
-*/
-
-function extractAfterTime(text) {
+  const today =
+    getTodayIST();
 
   /*
-  ১২টার পর
-  ১২টা পর
-  12টার পর
-  12:00 এর পর
-  12 PM
+  আজ / today
   */
 
-  const bengaliNumbers = {
+  if (
+    /আজ|today/i.test(
+      message
+    )
+  ) {
 
-    "০":"0",
-    "১":"1",
-    "২":"2",
-    "৩":"3",
-    "৪":"4",
-    "৫":"5",
-    "৬":"6",
-    "৭":"7",
-    "৮":"8",
-    "৯":"9"
+    return today;
 
-  };
+  }
 
+  /*
+  কাল / tomorrow
+  */
 
-  let converted =
-    text.replace(
-      /[০-৯]/g,
-      digit =>
-        bengaliNumbers[digit]
-    );
+  if (
+    /কাল|tomorrow/i.test(
+      message
+    )
+  ) {
 
-
-  const match =
-    converted.match(
-      /(\d{1,2})(?::(\d{2}))?\s*(?:টা|টার|টায়|টার পর|টা পর|এর পর|পর|pm|am)?/i
-    );
-
-
-  if (!match) {
-
-    /*
-    If user simply says
-    "আজ ১২টার পর"
-    */
-
-    const simple =
-      converted.match(
-        /(\d{1,2})\s*(?:টার পর|টা পর|এর পর|পর)/i
+    const d =
+      new Date(
+        today + "T00:00:00+05:30"
       );
 
-    if (simple) {
+    d.setDate(
+      d.getDate() + 1
+    );
+
+    return d
+      .toISOString()
+      .slice(0, 10);
+
+  }
+
+  /*
+  DD/MM/YYYY
+  */
+
+  const full =
+    message.match(
+      /(\d{1,2})[\/\-](\d{1,2})[\/\-](20\d{2})/
+    );
+
+  if (full) {
+
+    const day =
+      String(
+        full[1]
+      ).padStart(2, "0");
+
+    const month =
+      String(
+        full[2]
+      ).padStart(2, "0");
+
+    return `${full[3]}-${month}-${day}`;
+
+  }
+
+  /*
+  শুধু ২৯ তারিখ
+  */
+
+  const dayOnly =
+    message.match(
+      /(?:তারিখ|date)?\s*(\d{1,2})\s*(?:তারিখ)?/i
+    );
+
+  if (dayOnly) {
+
+    const requestedDay =
+      parseInt(
+        dayOnly[1],
+        10
+      );
+
+    if (
+      requestedDay >= 1 &&
+      requestedDay <= 31
+    ) {
+
+      const yearMonth =
+        today.substring(
+          0,
+          8
+        );
 
       return (
-        Number(simple[1]) *
-        60
+        yearMonth +
+        String(
+          requestedDay
+        ).padStart(2, "0")
       );
 
     }
 
+  }
+
+  return today;
+
+}
+
+
+/*
+==================================================
+TIME EXTRACTION
+==================================================
+*/
+
+function parseAfterTime(
+  message
+) {
+
+  /*
+  ১২টার পর
+  12টার পর
+  12 এর পর
+  */
+
+  const bengali =
+    message.match(
+      /([০-৯]{1,2})\s*(টা|টায়|টায়)?\s*(?:এর\s*)?(পর|পরে)/i
+    );
+
+  if (bengali) {
+
+    const bn =
+      bengali[1];
+
+    const english =
+      bn.replace(
+        /[০-৯]/g,
+        d =>
+          "০১২৩৪৫৬৭৮৯".indexOf(d)
+      );
+
+    const hour =
+      parseInt(
+        english,
+        10
+      );
+
+    return hour;
+
+  }
+
+  const english =
+    message.match(
+      /(\d{1,2})\s*(?:টা|টায়|টায়|টার)?\s*(?:এর\s*)?(পর|পরে|after)/i
+    );
+
+  if (english) {
+
+    return parseInt(
+      english[1],
+      10
+    );
+
+  }
+
+  /*
+  12 PM / 12 AM
+  */
+
+  const ampm =
+    message.match(
+      /(\d{1,2})\s*(am|pm)/i
+    );
+
+  if (ampm) {
+
+    let hour =
+      parseInt(
+        ampm[1],
+        10
+      );
+
+    const period =
+      ampm[2].toLowerCase();
+
+    if (
+      period === "pm" &&
+      hour < 12
+    ) {
+
+      hour += 12;
+
+    }
+
+    if (
+      period === "am" &&
+      hour === 12
+    ) {
+
+      hour = 0;
+
+    }
+
+    return hour;
+
+  }
+
+  return null;
+
+}
+
+
+/*
+==================================================
+FORMAT TIME
+==================================================
+*/
+
+function timeToMinutes(
+  time
+) {
+
+  if (!time) {
     return null;
-
   }
 
+  const match =
+    String(time).match(
+      /(\d{1,2}):(\d{2})/
+    );
 
-  let hour =
-    Number(match[1]);
-
-  const minute =
-    match[2]
-      ? Number(match[2])
-      : 0;
-
-
-  if (
-    /pm/i.test(match[0]) &&
-    hour < 12
-  ) {
-
-    hour += 12;
-
+  if (!match) {
+    return null;
   }
-
 
   return (
-    hour * 60 +
-    minute
+    parseInt(match[1], 10) *
+      60 +
+    parseInt(match[2], 10)
   );
+
+}
+
+
+function formatTrain(
+  train,
+  index
+) {
+
+  const number =
+    train?.train?.number ||
+    train?.number ||
+    "N/A";
+
+  const name =
+    train?.train?.name ||
+    train?.name ||
+    "Unknown Train";
+
+  const stop =
+    train?.stop ||
+    {};
+
+  const departure =
+    stop.departure ||
+    train?.departure ||
+    "--";
+
+  const arrival =
+    stop.arrival ||
+    train?.arrival ||
+    "--";
+
+  const live =
+    train?.live ||
+    {};
+
+  const delay =
+    live.delayMinutes;
+
+  const platform =
+    live.platform ||
+    stop.platform ||
+    "";
+
+  let line =
+    `${index}. 🚆 ${number} - ${name}\n`;
+
+  line +=
+    `   ছাড়ে: ${departure}`;
+
+  if (
+    arrival &&
+    arrival !== "--"
+  ) {
+
+    line +=
+      ` | পৌঁছায়: ${arrival}`;
+
+  }
+
+  if (
+    platform
+  ) {
+
+    line +=
+      ` | PF: ${platform}`;
+
+  }
+
+  if (
+    typeof delay === "number"
+  ) {
+
+    if (delay > 0) {
+
+      line +=
+        ` | Delay: ${delay} min`;
+
+    }
+    else {
+
+      line +=
+        ` | On Time`;
+
+    }
+
+  }
+
+  return line;
 
 }
 
@@ -681,30 +1096,23 @@ RAILRADAR REQUEST
 ==================================================
 */
 
-async function railRadarRequest(
-  path,
+async function railRadarGet(
+  endpoint,
   params = {}
 ) {
 
-  if (
-    !RAILRADAR_API_KEY
-  ) {
+  if (!RAILRADAR_API_KEY) {
 
     throw new Error(
-      "RAILRADAR_API_KEY missing"
+      "RAILRADAR_API_KEY_MISSING"
     );
 
   }
 
-
-  const url =
-    `https://api.railradar.in${path}`;
-
-
   const response =
     await axios.get(
 
-      url,
+      `${RAILRADAR_BASE}${endpoint}`,
 
       {
 
@@ -724,7 +1132,6 @@ async function railRadarRequest(
 
     );
 
-
   return response.data;
 
 }
@@ -737,40 +1144,35 @@ TRAINS BETWEEN STATIONS
 */
 
 async function getTrainsBetween(
-  source,
-  destination,
-  date
+  from,
+  to,
+  date,
+  live = false
 ) {
 
-  try {
+  const data =
+    await railRadarGet(
 
-    const data =
-      await railRadarRequest(
+      `/trains/between/${from}/${to}`,
 
-        `/v1/trains/between/${source}/${destination}`,
+      {
 
-        {
-          date: date,
-          live: "true"
-        }
+        date,
 
-      );
+        live:
 
+          live
+            ? "true"
+            : "false"
 
-    return data;
+      }
 
-  } catch (error) {
-
-    console.error(
-      "RailRadar Between Error:",
-      error.response?.data ||
-      error.message
     );
 
-
-    return null;
-
-  }
+  return (
+    data?.data?.trains ||
+    []
+  );
 
 }
 
@@ -782,38 +1184,27 @@ LIVE TRAIN STATUS
 */
 
 async function getLiveTrain(
-  trainNumber
+  trainNumber,
+  date
 ) {
 
-  try {
+  const data =
+    await railRadarGet(
 
-    const data =
-      await railRadarRequest(
+      `/trains/${trainNumber}/live`,
 
-        `/v1/trains/${trainNumber}/live`,
+      {
 
-        {
-          authoritative:
-            "true"
-        }
+        date,
 
-      );
+        authoritative:
+          "true"
 
+      }
 
-    return data;
-
-  } catch (error) {
-
-    console.error(
-      "RailRadar Live Error:",
-      error.response?.data ||
-      error.message
     );
 
-
-    return null;
-
-  }
+  return data?.data;
 
 }
 
@@ -824,18 +1215,402 @@ TRAIN NUMBER DETECTION
 ==================================================
 */
 
-function findTrainNumber(text) {
+function detectTrainNumber(
+  message
+) {
 
   const match =
-    text.match(
-      /\b\d{5}\b/
+    message.match(
+      /\b(\d{5})\b/
     );
 
-  if (match) {
+  return match
+    ? match[1]
+    : null;
 
-    return match[0];
+}
+
+
+/*
+==================================================
+TRAIN QUERY HANDLER
+==================================================
+*/
+
+async function handleRailwayQuestion(
+  userMessage
+) {
+
+  const stations =
+    detectStations(
+      userMessage
+    );
+
+  const date =
+    parseDate(
+      userMessage
+    );
+
+  const afterHour =
+    parseAfterTime(
+      userMessage
+    );
+
+  const trainNumber =
+    detectTrainNumber(
+      userMessage
+    );
+
+
+  console.log(
+    "Detected stations:",
+    stations
+  );
+
+  console.log(
+    "Detected date:",
+    date
+  );
+
+  console.log(
+    "Detected after hour:",
+    afterHour
+  );
+
+  console.log(
+    "Detected train number:",
+    trainNumber
+  );
+
+
+  /*
+  ==============================================
+  LIVE TRAIN STATUS
+  ==============================================
+  */
+
+  if (
+    trainNumber &&
+    /লাইভ|live|status|স্ট্যাটাস|কোথায়|কোথায়|running|চলছে/i.test(
+      userMessage
+    )
+  ) {
+
+    try {
+
+      const train =
+        await getLiveTrain(
+          trainNumber,
+          date
+        );
+
+      if (!train) {
+
+        return null;
+
+      }
+
+      let reply =
+        `🚆 ${train.train?.number || trainNumber} ${train.train?.name || ""}\n\n`;
+
+      if (
+        train.status
+      ) {
+
+        reply +=
+          `Status: ${train.status}\n`;
+
+      }
+
+      if (
+        typeof train.delayMinutes ===
+        "number"
+      ) {
+
+        reply +=
+          `Delay: ${train.delayMinutes} মিনিট\n`;
+
+      }
+
+      if (
+        train.currentLocation?.stationName
+      ) {
+
+        reply +=
+          `বর্তমান অবস্থান: ${train.currentLocation.stationName}\n`;
+
+      }
+
+      if (
+        train.nextHalt?.stationName
+      ) {
+
+        reply +=
+          `পরবর্তী স্টেশন: ${train.nextHalt.stationName}\n`;
+
+      }
+
+      if (
+        train.nextHalt?.distance != null
+      ) {
+
+        reply +=
+          `দূরত্ব: ${train.nextHalt.distance} km\n`;
+
+      }
+
+      reply +=
+        `\nতারিখ: ${date}`;
+
+      return reply;
+
+    }
+
+    catch (error) {
+
+      console.error(
+        "Live Train API Error:",
+        error.response?.data ||
+        error.message
+      );
+
+      return (
+        `দুঃখিত, ${trainNumber} নম্বর ট্রেনের live status এখন পাওয়া যাচ্ছে না।`
+      );
+
+    }
 
   }
+
+
+  /*
+  ==============================================
+  TRAINS BETWEEN STATIONS
+  ==============================================
+  */
+
+  if (
+    stations.from &&
+    stations.to
+  ) {
+
+    try {
+
+      const trains =
+        await getTrainsBetween(
+
+          stations.from,
+
+          stations.to,
+
+          date,
+
+          false
+
+        );
+
+
+      if (
+        !trains ||
+        trains.length === 0
+      ) {
+
+        return (
+          `🚆 ${stations.from} থেকে ${stations.to} যাওয়ার জন্য ${date} তারিখে কোনো train data পাওয়া যায়নি।`
+        );
+
+      }
+
+
+      let filtered =
+        [...trains];
+
+
+      /*
+      after time filtering
+      */
+
+      if (
+        afterHour !== null
+      ) {
+
+        const afterMinutes =
+          afterHour * 60;
+
+
+        filtered =
+          filtered.filter(
+            item => {
+
+              const dep =
+                item?.stop?.departure ||
+                item?.departure;
+
+              const mins =
+                timeToMinutes(
+                  dep
+                );
+
+              if (
+                mins === null
+              ) {
+
+                return true;
+
+              }
+
+              return (
+                mins >= afterMinutes
+              );
+
+            }
+          );
+
+      }
+
+
+      /*
+      Sort by departure
+      */
+
+      filtered.sort(
+        (a, b) => {
+
+          const ta =
+            timeToMinutes(
+              a?.stop?.departure ||
+              a?.departure
+            );
+
+          const tb =
+            timeToMinutes(
+              b?.stop?.departure ||
+              b?.departure
+            );
+
+          if (
+            ta === null
+          ) return 1;
+
+          if (
+            tb === null
+          ) return -1;
+
+          return ta - tb;
+
+        }
+      );
+
+
+      /*
+      Limit WhatsApp message
+      */
+
+      const limited =
+        filtered.slice(
+          0,
+          15
+        );
+
+
+      let reply =
+        `🚆 ট্রেন তথ্য\n\n`;
+
+      reply +=
+        `যাত্রা: ${stations.from} → ${stations.to}\n`;
+
+      reply +=
+        `তারিখ: ${date}\n`;
+
+      if (
+        afterHour !== null
+      ) {
+
+        reply +=
+          `সময়: ${afterHour}:00-এর পর\n`;
+
+      }
+
+      reply +=
+        `\n`;
+
+
+      limited.forEach(
+        (train, index) => {
+
+          reply +=
+            formatTrain(
+              train,
+              index + 1
+            ) +
+            "\n\n";
+
+        }
+      );
+
+
+      if (
+        filtered.length >
+        limited.length
+      ) {
+
+        reply +=
+          `আরও ${filtered.length - limited.length}টি train আছে।`;
+
+      }
+
+
+      return reply;
+
+    }
+
+    catch (error) {
+
+      console.error(
+        "RailRadar Between Error:",
+        error.response?.data ||
+        error.message
+      );
+
+
+      if (
+        error.response?.status ===
+        401
+      ) {
+
+        return (
+          "⚠️ Railway API key সঠিক নয় অথবা expired হয়েছে।"
+        );
+
+      }
+
+
+      if (
+        error.response?.status ===
+        429
+      ) {
+
+        return (
+          "⚠️ Railway API-এর monthly free limit শেষ হয়ে গেছে।"
+        );
+
+      }
+
+
+      return (
+        "দুঃখিত, এই মুহূর্তে railway data পাওয়া যাচ্ছে না। কিছুক্ষণ পরে আবার চেষ্টা করুন।"
+      );
+
+    }
+
+  }
+
+
+  /*
+  ==============================================
+  NO DIRECT RAILWAY QUERY
+  ==============================================
+  */
 
   return null;
 
@@ -844,376 +1619,67 @@ function findTrainNumber(text) {
 
 /*
 ==================================================
-FORMAT TRAIN RESULTS
+GENERAL AI QUESTION
 ==================================================
 */
 
-function formatTrains(
-  apiData,
-  afterMinutes = null
+async function generateFinalReply(
+  userMessage
 ) {
 
-  if (
-    !apiData ||
-    !apiData.success
-  ) {
-
-    return null;
-
-  }
-
-
-  const trains =
-    apiData.data?.trains || [];
-
-
-  if (
-    trains.length === 0
-  ) {
-
-    return null;
-
-  }
-
-
-  let filtered =
-    trains;
-
-
-  if (
-    afterMinutes !== null
-  ) {
-
-    filtered =
-      trains.filter(
-        item => {
-
-          const departure =
-            item.from?.departure;
-
-          if (!departure) {
-            return false;
-          }
-
-
-          const [
-            h,
-            m
-          ] =
-            departure
-              .split(":")
-              .map(Number);
-
-
-          const trainMinutes =
-            h * 60 + m;
-
-
-          return (
-            trainMinutes >
-            afterMinutes
-          );
-
-        }
-      );
-
-  }
-
-
-  if (
-    filtered.length === 0
-  ) {
-
-    return (
-      "🚆 ওই সময়ের পরে এই route-এ কোনো train পাওয়া যায়নি।"
-    );
-
-  }
-
-
-  let message =
-    "🚆 ট্রেনের তথ্য\n\n";
-
-
-  filtered
-    .slice(0, 15)
-    .forEach(
-      (item, index) => {
-
-        const train =
-          item.train || {};
-
-        const from =
-          item.from || {};
-
-        const to =
-          item.to || {};
-
-        const live =
-          item.live || {};
-
-
-        message +=
-          `${index + 1}. ${train.number || ""} ${train.name || ""}\n`;
-
-        message +=
-          `   ছাড়বে: ${from.departure || "--"}\n`;
-
-        message +=
-          `   পৌঁছাবে: ${to.arrival || "--"}\n`;
-
-
-        if (
-          live.delayMinutes !==
-          undefined &&
-          live.delayMinutes !==
-          null
-        ) {
-
-          message +=
-            `   বিলম্ব: ${live.delayMinutes} মিনিট\n`;
-
-        }
-
-
-        if (
-          live.platform
-        ) {
-
-          message +=
-            `   প্ল্যাটফর্ম: ${live.platform}\n`;
-
-        }
-
-
-        message +=
-          "\n";
-
-      }
+  const railwayReply =
+    await handleRailwayQuestion(
+      userMessage
     );
 
 
-  return message.trim();
+  /*
+  যদি Railway API answer দেয়,
+  সেটাই final answer.
+  */
+
+  if (
+    railwayReply
+  ) {
+
+    return railwayReply;
+
+  }
+
+
+  /*
+  অন্য প্রশ্ন Gemini-তে যাবে
+  */
+
+  const aiReply =
+    await askGemini(
+      userMessage
+    );
+
+
+  if (
+    aiReply
+  ) {
+
+    return aiReply;
+
+  }
+
+
+  /*
+  Gemini fail হলেও fallback
+  */
+
+  return (
+    "দুঃখিত, এই মুহূর্তে উত্তর তৈরি করা যাচ্ছে না। অনুগ্রহ করে কিছুক্ষণ পরে আবার চেষ্টা করুন।"
+  );
 
 }
 
 
 /*
 ==================================================
-FORMAT LIVE STATUS
-==================================================
-*/
-
-function formatLiveStatus(
-  data
-) {
-
-  if (
-    !data ||
-    !data.success
-  ) {
-
-    return null;
-
-  }
-
-
-  const d =
-    data.data;
-
-
-  if (!d) {
-
-    return null;
-
-  }
-
-
-  const train =
-    d.train || {};
-
-
-  const current =
-    d.currentLocation || {};
-
-
-  const next =
-    d.nextHalt || {};
-
-
-  let message =
-    `🚆 ${d.trainNumber || train.number || ""} ${d.trainName || train.name || ""}\n\n`;
-
-
-  message +=
-    `স্ট্যাটাস: ${d.status || "N/A"}\n`;
-
-
-  if (
-    d.delayMinutes !==
-    undefined &&
-    d.delayMinutes !==
-    null
-  ) {
-
-    message +=
-      `বিলম্ব: ${d.delayMinutes} মিনিট\n`;
-
-  }
-
-
-  if (
-    current.stationName
-  ) {
-
-    message +=
-      `বর্তমান অবস্থান: ${current.stationName}\n`;
-
-  }
-
-  else if (
-    current.stationCode
-  ) {
-
-    message +=
-      `বর্তমান স্টেশন: ${current.stationCode}\n`;
-
-  }
-
-
-  if (
-    current.speedKmh
-  ) {
-
-    message +=
-      `গতি: ${current.speedKmh} km/h\n`;
-
-  }
-
-
-  if (
-    next.stationName
-  ) {
-
-    message +=
-      `পরবর্তী স্টেশন: ${next.stationName}\n`;
-
-  }
-
-  else if (
-    next.stationCode
-  ) {
-
-    message +=
-      `পরবর্তী স্টেশন: ${next.stationCode}\n`;
-
-  }
-
-
-  if (
-    current.platform
-  ) {
-
-    message +=
-      `প্ল্যাটফর্ম: ${current.platform}\n`;
-
-  }
-
-
-  if (
-    d.isLive
-  ) {
-
-    message +=
-      "\n🟢 Live data পাওয়া গেছে।";
-
-  }
-
-
-  return message.trim();
-
-}
-
-
-/*
-==================================================
-GEMINI RESPONSE
-==================================================
-*/
-
-async function askGemini(
-  userMessage,
-  railwayContext
-) {
-
-  try {
-
-    const prompt = `
-
-তুমি "Sealdah Train Service" WhatsApp Assistant।
-
-তোমার কাজ হলো Indian Railways সম্পর্কিত
-প্রশ্নের উত্তর দেওয়া।
-
-নিয়ম:
-
-1. ব্যবহারকারীর ভাষা অনুসরণ করবে।
-2. বাংলা প্রশ্ন হলে বাংলা উত্তর দেবে।
-3. ইংরেজি প্রশ্ন হলে ইংরেজি উত্তর দেবে।
-4. Railway data দেওয়া থাকলে সেই data-ই ব্যবহার করবে।
-5. Train number, departure time, arrival time বা live status কখনো নিজের থেকে বানাবে না।
-6. Railway data না থাকলে স্পষ্টভাবে বলবে যে live railway data পাওয়া যায়নি।
-7. খুব সহজ এবং ছোট WhatsApp-friendly উত্তর দেবে।
-8. অপ্রয়োজনীয় explanation দেবে না।
-9. "আমি live railway data ব্যবহার করছি" বলবে শুধুমাত্র সত্যিই API data পাওয়া গেলে।
-10. API data-এর বাইরে কোনো train timing তৈরি করবে না।
-
-ব্যবহারকারীর প্রশ্ন:
-
-${userMessage}
-
-
-Railway API data:
-
-${railwayContext || "NO RAILWAY DATA AVAILABLE"}
-
-এখন ব্যবহারকারীকে উত্তর দাও।
-`;
-
-
-    const result =
-      await geminiModel.generateContent(
-        prompt
-      );
-
-
-    const response =
-      result.response;
-
-
-    return response
-      .text()
-      .trim();
-
-
-  } catch (error) {
-
-    console.error(
-      "Gemini Error:",
-      error.message
-    );
-
-
-    return null;
-
-  }
-
-}
-
-
-/*
-==================================================
-INCOMING WHATSAPP MESSAGE
+WHATSAPP WEBHOOK
 ==================================================
 */
 
@@ -1222,7 +1688,7 @@ app.post(
   async (req, res) => {
 
     /*
-    WhatsApp-কে সঙ্গে সঙ্গে 200
+    WhatsApp-কে সঙ্গে সঙ্গে 200 দিতে হবে
     */
 
     res.sendStatus(200);
@@ -1235,13 +1701,19 @@ app.post(
       );
 
 
+      console.log(
+        "Webhook body:",
+        JSON.stringify(
+          req.body
+        )
+      );
+
+
       const entry =
         req.body?.entry?.[0];
 
-
       const change =
         entry?.changes?.[0];
-
 
       const value =
         change?.value;
@@ -1252,7 +1724,7 @@ app.post(
 
 
       /*
-      Ignore status webhook
+      Status webhook হলে ignore
       */
 
       if (
@@ -1273,11 +1745,6 @@ app.post(
         messages[0];
 
 
-      /*
-      VERY IMPORTANT:
-      Actual sender number
-      */
-
       const from =
         message.from;
 
@@ -1295,11 +1762,12 @@ app.post(
 
 
       /*
-      Text only
+      শুধু text message
       */
 
       if (
-        message.type !== "text"
+        message.type !==
+        "text"
       ) {
 
         await sendWhatsAppMessage(
@@ -1319,7 +1787,9 @@ app.post(
         message.text?.body?.trim();
 
 
-      if (!userMessage) {
+      if (
+        !userMessage
+      ) {
 
         return;
 
@@ -1333,205 +1803,28 @@ app.post(
 
 
       /*
-      ==========================================
-      CHECK TRAIN NUMBER
-      ==========================================
+      AI / Railway
       */
 
-      const trainNumber =
-        findTrainNumber(
-          userMessage
-        );
-
-
-      if (trainNumber) {
-
-        console.log(
-          "TRAIN NUMBER DETECTED:",
-          trainNumber
-        );
-
-
-        const liveData =
-          await getLiveTrain(
-            trainNumber
-          );
-
-
-        if (liveData) {
-
-          const liveMessage =
-            formatLiveStatus(
-              liveData
-            );
-
-
-          if (liveMessage) {
-
-            await sendWhatsAppMessage(
-              from,
-              liveMessage
-            );
-
-
-            console.log(
-              "LIVE TRAIN RESPONSE SENT"
-            );
-
-
-            return;
-
-          }
-
-        }
-
-      }
-
-
-      /*
-      ==========================================
-      ROUTE DETECTION
-      ==========================================
-      */
-
-      const route =
-        detectRoute(
+      const reply =
+        await generateFinalReply(
           userMessage
         );
 
 
       console.log(
-        "SOURCE:",
-        route.source
-      );
-
-
-      console.log(
-        "DESTINATION:",
-        route.destination
+        "FINAL REPLY:",
+        reply
       );
 
 
       /*
-      ==========================================
-      TRAIN BETWEEN STATIONS
-      ==========================================
+      একই sender number-এ reply
       */
-
-      let railwayData =
-        null;
-
-
-      let formattedTrainData =
-        null;
-
-
-      if (
-        route.source &&
-        route.destination
-      ) {
-
-        const date =
-          getTodayIST();
-
-
-        const afterTime =
-          extractAfterTime(
-            userMessage
-          );
-
-
-        console.log(
-          "JOURNEY DATE:",
-          date
-        );
-
-
-        console.log(
-          "AFTER TIME:",
-          afterTime
-        );
-
-
-        railwayData =
-          await getTrainsBetween(
-
-            route.source,
-
-            route.destination,
-
-            date
-
-          );
-
-
-        formattedTrainData =
-          formatTrains(
-
-            railwayData,
-
-            afterTime
-
-          );
-
-
-        if (
-          formattedTrainData
-        ) {
-
-          await sendWhatsAppMessage(
-
-            from,
-
-            formattedTrainData
-
-          );
-
-
-          console.log(
-            "TRAIN LIST RESPONSE SENT"
-          );
-
-
-          return;
-
-        }
-
-      }
-
-
-      /*
-      ==========================================
-      GEMINI FALLBACK
-      ==========================================
-      */
-
-      const aiReply =
-        await askGemini(
-
-          userMessage,
-
-          formattedTrainData ||
-          (
-            railwayData
-              ? JSON.stringify(
-                  railwayData
-                )
-              : null
-          )
-
-        );
-
-
-      const finalReply =
-        aiReply ||
-
-        "দুঃখিত, এই মুহূর্তে তথ্য পাওয়া যাচ্ছে না। অনুগ্রহ করে কিছুক্ষণ পরে আবার চেষ্টা করুন।";
-
 
       console.log(
-        "AI REPLY:",
-        finalReply
+        "Sending WhatsApp reply to:",
+        from
       );
 
 
@@ -1539,7 +1832,7 @@ app.post(
 
         from,
 
-        finalReply
+        reply
 
       );
 
@@ -1554,11 +1847,12 @@ app.post(
         "=========================================="
       );
 
+    }
 
-    } catch (error) {
+    catch (error) {
 
       console.error(
-        "WEBHOOK ERROR:",
+        "Webhook Error:",
         error.response?.data ||
         error.message ||
         error
@@ -1581,7 +1875,7 @@ app.listen(
   () => {
 
     console.log(
-      "================================"
+      "=========================================="
     );
 
     console.log(
@@ -1589,7 +1883,7 @@ app.listen(
     );
 
     console.log(
-      "================================"
+      "=========================================="
     );
 
     console.log(
@@ -1610,8 +1904,19 @@ app.listen(
     );
 
     console.log(
+      "Home: /"
+    );
+
+    console.log(
       "Gemini API:",
       GEMINI_API_KEY
+        ? "OK"
+        : "MISSING"
+    );
+
+    console.log(
+      "RailRadar API:",
+      RAILRADAR_API_KEY
         ? "OK"
         : "MISSING"
     );
@@ -1631,16 +1936,8 @@ app.listen(
     );
 
     console.log(
-      "RailRadar API:",
-      RAILRADAR_API_KEY
-        ? "OK"
-        : "MISSING"
-    );
-
-    console.log(
-      "================================"
+      "=========================================="
     );
 
   }
 );
-
