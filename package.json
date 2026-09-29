@@ -1,18 +1,15 @@
-```json
 {
   "name": "sealdah-train-service-ai-bot",
   "version": "3.0.0",
   "description": "Sealdah Train Service WhatsApp AI Bot",
   "main": "index.js",
-  "type": "module",
   "scripts": {
     "start": "node index.js"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "axios": "^1.8.4",
     "dotenv": "^16.4.7",
-    "express": "^5.1.0",
-    "railkit": "^4.1.0"
+    "express": "^4.21.2"
   }
 }
-```
