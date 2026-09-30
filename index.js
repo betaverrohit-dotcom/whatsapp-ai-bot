@@ -28,7 +28,7 @@ const userPrefs = {};
 const userState = {}; 
 
 /* =========================================================
-   MULTI-LANGUAGE DICTIONARY (Fully Restored & Fixed)
+   MULTI-LANGUAGE DICTIONARY 
 ========================================================= */
 const LANG = {
   en: {
@@ -106,7 +106,7 @@ const LANG = {
 };
 
 /* =========================================================
-   SEND INTERACTIVE MENUS (STRICT MAX 10 ROWS FIX)
+   SEND INTERACTIVE MENUS
 ========================================================= */
 async function sendInteractiveList(to, headerText, bodyText, buttonText, sections) {
   try {
@@ -146,7 +146,7 @@ async function sendMainMenu(to, lang) {
   ]);
 }
 
-// Fixed: Exactly 10 rows maximum across all sections (WhatsApp Limit Rule)
+// 30 Stations Maximum
 async function sendStationMenu(to, lang, isFrom) {
   const t = LANG[lang];
   const header = isFrom ? "📍 Departure" : "🎯 Destination";
@@ -154,22 +154,47 @@ async function sendStationMenu(to, lang, isFrom) {
 
   const sections = [
     {
-      title: "Popular Stations",
+      title: "Main Line",
       rows: [
         { id: "stn_SDAH", title: "Sealdah (SDAH)", description: "শিয়ালদা" },
-        { id: "stn_DDJ", title: "Dum Dum (DDJ)", description: "দমদম" },
+        { id: "stn_DDJ", title: "Dum Dum (DDJ)", description: "দমদম জংশন" },
+        { id: "stn_BNXR", title: "Bidhannagar (BNXR)", description: "বিধাননগর রোড" },
         { id: "stn_BP", title: "Barrackpore (BP)", description: "ব্যারাকপুর" },
-        { id: "stn_NH", title: "Naihati (NH)", description: "নৈহাটি" },
+        { id: "stn_NH", title: "Naihati (NH)", description: "নৈহাটি জংশন" },
         { id: "stn_KYI", title: "Kalyani (KYI)", description: "কল্যাণী" },
-        { id: "stn_RHA", title: "Ranaghat (RHA)", description: "রানাঘাট" },
+        { id: "stn_RHA", title: "Ranaghat (RHA)", description: "রানাঘাট জংশন" },
+        { id: "stn_STB", title: "Shantipur (STB)", description: "শান্তিপুর" },
         { id: "stn_KNJ", title: "Krishnanagar (KNJ)", description: "কৃষ্ণনগর" },
-        { id: "stn_BT", title: "Barasat (BT)", description: "বারাসত" },
-        { id: "stn_BNJ", title: "Bongaon (BNJ)", description: "বনগাঁ" }
+        { id: "stn_LGL", title: "Lalgola (LGL)", description: "লালগোলা" }
       ]
     },
     {
-      title: "Other Stations",
+      title: "Bongaon & South Line",
       rows: [
+        { id: "stn_BT", title: "Barasat (BT)", description: "বারাসত" },
+        { id: "stn_MMG", title: "Madhyamgram (MMG)", description: "মধ্যমগ্রাম" },
+        { id: "stn_HB", title: "Habra (HB)", description: "হাবরা" },
+        { id: "stn_BNJ", title: "Bongaon (BNJ)", description: "বনগাঁ" },
+        { id: "stn_BSHT", title: "Basirhat (BSHT)", description: "বসিরহাট" },
+        { id: "stn_BLN", title: "Ballygunge (BLN)", description: "বালিগঞ্জ" },
+        { id: "stn_JDP", title: "Jadavpur (JDP)", description: "যাদবপুর" },
+        { id: "stn_SPR", title: "Sonarpur (SPR)", description: "সোনারপুর" },
+        { id: "stn_BRP", title: "Baruipur (BRP)", description: "বারুইপুর" },
+        { id: "stn_DH", title: "Diamond Hbr (DH)", description: "ডায়মন্ড হারবার" }
+      ]
+    },
+    {
+      title: "Other Routes & Manual",
+      rows: [
+        { id: "stn_KWDP", title: "Kakdwip (KWDP)", description: "কাকদ্বীপ" },
+        { id: "stn_NMKA", title: "Namkhana (NMKA)", description: "নামখানা" },
+        { id: "stn_CG", title: "Canning (CG)", description: "ক্যানিং" },
+        { id: "stn_BGB", title: "Budge Budge (BGB)", description: "বজবজ" },
+        { id: "stn_HNB", title: "Hasnabad (HNB)", description: "হাসনাবাদ" },
+        { id: "stn_CDH", title: "Chakdaha (CDH)", description: "চাকদহ" },
+        { id: "stn_PTF", title: "Palta (PTF)", description: "পলতা" },
+        { id: "stn_SEP", title: "Sodepur (SEP)", description: "সোদপুর" },
+        { id: "stn_KNR", title: "Kankinara (KNR)", description: "কাঁকিনাড়া" },
         { id: "cmd_type_manual", title: "✍️ Type Manually", description: "অন্য স্টেশন নিজে লিখে খুঁজুন" }
       ]
     }
@@ -260,19 +285,25 @@ const STATIONS = {
   "কলকাতা": "KOAA", "kolkata": "KOAA", "হাওড়া": "HWH", "howrah": "HWH"
 };
 
-function findStationCode(text) {
-  const original = text || "";
-  const normalized = cleanText(original);
+// BUG FIX: API works best with station codes. This checks the dictionary first, then falls back to API.
+async function resolveStation(val) {
+  if (!val) return null;
+  // 1. Check local dictionary first
+  const normalized = cleanText(val);
   const keys = Object.keys(STATIONS).sort((a, b) => b.length - a.length);
   for (const key of keys) {
     if (normalized.includes(cleanText(key))) return STATIONS[key];
   }
-  const codeMatch = original.match(/\b[A-Za-z]{2,5}\b/);
+  const codeMatch = val.match(/\b[A-Za-z]{2,5}\b/);
   if (codeMatch) {
     const code = codeMatch[0].toUpperCase();
     if (Object.values(STATIONS).includes(code)) return code;
   }
-  return null;
+  // 2. If not found, use API
+  try {
+    const res = await railRadarGet("/v1/lookup/search/stations", { q: val, limit: 1 });
+    return (res.data?.stations?.[0]?.code || res.stations?.[0]?.code || null);
+  } catch(e) { return null; }
 }
 
 const STATION_COORDS = [
@@ -304,13 +335,6 @@ function getNearestStation(lat, lon) {
 async function railRadarGet(path, params = {}) {
   const res = await axios.get(`${RAILRADAR_BASE}${path}`, { params, headers: { Authorization: `Bearer ${RAILRADAR_API_KEY}` } });
   return res.data;
-}
-
-async function resolveStation(val) {
-  try {
-    const res = await railRadarGet("/v1/lookup/search/stations", { q: val, limit: 1 });
-    return (res.data?.stations?.[0]?.code || res.stations?.[0]?.code || null);
-  } catch(e) { return null; }
 }
 
 async function handleBetween(from, to, lang) {
@@ -455,8 +479,11 @@ app.post("/webhook", async (req, res) => {
          userState[from] = null;
          let rawFrom = routeMatch[1].replace(/(যাব|যাওয়ার|যেতে|ট্রেন|কখন|train|going)/gi, "").trim();
          let rawTo = routeMatch[3].replace(/(যাব|যাওয়ার|যেতে|ট্রেন|কখন|আছে|কি|train|going)/gi, "").trim();
+         
+         // BUG FIX: Checking dictionary first
          let f = await resolveStation(rawFrom);
          let t = await resolveStation(rawTo);
+         
          if(f && t) reply = await handleBetween(f, t, lang);
          else reply = LANG[lang].btnErr;
       }
