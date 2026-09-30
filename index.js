@@ -24,11 +24,11 @@ const ai = GEMINI_API_KEY ? new GoogleGenAI({ apiKey: GEMINI_API_KEY }) : null;
 const userPrefs = {}; 
 
 /* =========================================================
-   MULTI-LANGUAGE DICTIONARY (Updated for Real-world usage)
+   MULTI-LANGUAGE DICTIONARY (Fully Supported)
 ========================================================= */
 const LANG = {
   en: {
-    welcome: "🚆 *Welcome to Sealdah Train Bot!*\n\n⚠️ _Note: Train search is only for Sealdah suburban (local) trains._\n\n👉 *How to use (Type or Send Voice Note):*\n• Route: *Kalyani to Palpara* or *SDAH to NH*\n• Live: *Live 31530*\n• PNR: *PNR 1234567890*",
+    welcome: "🚆 *Welcome to Sealdah Train Bot!*\n\n⚠️ _Note: Train search is only for Sealdah suburban (local) trains._\n\n👉 *How to use (Type or Voice):*\n• Route: *Kalyani to Palpara* or *SDAH to NH*\n• Live: *Live 31530*\n• PNR: *PNR 1234567890*",
     langSet: "Language set to English! ✅",
     pnrErr: "❌ PNR information not found.",
     liveErr: "❌ Live status not found.",
@@ -42,6 +42,22 @@ const LANG = {
     voiceErr: "❌ Could not process the voice message. Please type instead.",
     askSpecific: "Are you traveling FROM *{stn}* or TO *{stn}*?\n\nPlease specify your full route via text or voice.\n👉 Example: *Sealdah to {stn}*",
     locFound: "📍 Location tracked!\nYour nearest station is *{stn}*.\n\nWhere do you want to go from here?\nPlease tell me via text or voice.\n\n👉 Example: *'{shortStn} to Sealdah'* or *'{shortStn} to Ranaghat'*"
+  },
+  hi: {
+    welcome: "🚆 *सियालदह ट्रेन बॉट में आपका स्वागत है!*\n\n⚠️ _नोट: ट्रेन सर्च केवल सियालदह लोकल ट्रेनों के लिए है।_\n\n👉 *कैसे उपयोग करें (लिखें या वॉयस मैसेज दें):*\n• रूट लिखें: *SDAH to NH* या *सियालदह से कल्याणी*\n• लाइव स्थिति: *Live 31530*\n• PNR चेक: *PNR 1234567890*",
+    langSet: "भाषा हिन्दी में सेट कर दी गई है! ✅",
+    pnrErr: "❌ PNR की जानकारी नहीं मिली।",
+    liveErr: "❌ लाइव स्थिति नहीं मिली।",
+    btnErr: "❌ रूट या ट्रेन डेटा नहीं मिला। कृपया दोनों स्टेशनों के नाम सही से बताएं।",
+    noTrn: "🚆 इस रूट पर कोई ट्रेन नहीं मिली।",
+    noTrnToday: "🚆 आज के लिए कोई और ट्रेन उपलब्ध नहीं है।",
+    askDest: "आप कहाँ जाना चाहते हैं? (उदा: SDAH to KNJ)",
+    locErr: "क्षमा करें, कोई नजदीकी स्टेशन नहीं मिला।",
+    errMedia: "क्षमा करें, मैं केवल टेक्स्ट, वॉयस और स्थान 📍 स्वीकार करता हूँ।",
+    voiceRec: "🎙️ आपकी आवाज़ को प्रोसेस किया जा रहा है... कृपया प्रतीक्षा करें।",
+    voiceErr: "❌ आवाज़ समझने में समस्या हुई। कृपया लिखकर भेजें।",
+    askSpecific: "क्या आप *{stn}* से यात्रा कर रहे हैं या *{stn}* जा रहे हैं?\n\nकृपया अपना पूरा रूट लिखकर या बोलकर बताएं।\n👉 उदाहरण: *सियालदह से {stn}*",
+    locFound: "📍 स्थान ट्रैक किया गया!\nआपका नजदीकी स्टेशन *{stn}* है।\n\nआप यहाँ से कहाँ जाना चाहते हैं?\nकृपया लिखकर या बोलकर बताएं।\n\n👉 उदाहरण: *'{shortStn} से सियालदह'*"
   },
   bn: {
     welcome: "🚆 *শিয়ালদা ট্রেন বটে স্বাগতম!*\n\n⚠ _বিশেষ দ্রষ্টব্য: এই সার্ভিসটি শুধুমাত্র শিয়ালদা লোকাল ট্রেনের জন্য।_\n\n👉 *কীভাবে ব্যবহার করবেন (লিখে বা ভয়েস মেসেজ দিয়ে):*\n• রুট জানতে: *কল্যাণী থেকে শান্তিপুর* বা *শিয়ালদা থেকে রানাঘাট*\n• লাইভ স্ট্যাটাস: *Live 31530*\n• PNR চেক: *PNR 1234567890*",
@@ -60,7 +76,6 @@ const LANG = {
     locFound: "📍 আপনার লোকেশন ট্র্যাক করা হয়েছে!\nআপনার নিকটবর্তী স্টেশন: *{stn}*।\n\nআপনি এখান থেকে কোথায় যেতে চান?\nদয়া করে গন্তব্যের নাম লিখে বা ভয়েস মেসেজে জানান।\n\n👉 উদাহরণ: *'{shortStn} থেকে শিয়ালদা'* বা *'{shortStn} থেকে শান্তিপুর'*"
   }
 };
-LANG.hi = LANG.bn; // Hindi mapping points to Bangla structure to keep code compact for now
 
 /* =========================================================
    SEND BUTTON MENUS
@@ -72,7 +87,7 @@ async function sendLanguageButtons(to) {
       messaging_product: "whatsapp", recipient_type: "individual", to: to, type: "interactive",
       interactive: {
         type: "button",
-        body: { text: "🗣️️ Choose your language / ভাষা বেছে নিন / भाषा चुनें:" },
+        body: { text: "🗣 Choose your language / ভাষা বেছে নিন / भाषा चुनें:" },
         action: {
           buttons: [
             { type: "reply", reply: { id: "lang_bn", title: "বাংলা" } },
@@ -129,93 +144,94 @@ function findPassengersArray(obj) {
 }
 
 /* =========================================================
-   MASSIVE STATION DICTIONARY
+   MASSIVE TRILINGUAL STATION DICTIONARY
 ========================================================= */
 const STATIONS = {
-  "শিয়ালদা": "SDAH", "sealdah": "SDAH", "sdah": "SDAH", "শিয়ালদহ": "SDAH",
-  "বিধাননগর": "BNXR", "bidhannagar": "BNXR",
-  "দমদম ক্যান্টনমেন্ট": "DDC", "dum dum cantt": "DDC",
-  "দমদম": "DDJ", "dumdum": "DDJ", "ddj": "DDJ",
-  "বেলঘড়িয়া": "BLH", "বেলঘড়িয়া": "BLH", "belgharia": "BLH",
-  "আগরপাড়া": "AGP", "agarpara": "AGP",
-  "সোদপুর": "SEP", "sodepur": "SEP",
-  "খড়দহ": "KDH", "khardaha": "KDH",
-  "টিটাগড়": "TGH", "titagarh": "TGH",
-  "ব্যারাকপুর": "BP", "barrackpore": "BP",
-  "পলতা": "PTF", "palta": "PTF",
-  "ইছাপুর": "IP", "ichhapur": "IP",
-  "শ্যামনগর": "SNR", "shyamnagar": "SNR",
-  "জগদ্দল": "JGDL", "jagaddal": "JGDL",
-  "কাঁকিনাড়া": "KNR", "kankinara": "KNR",
-  "নৈহাটি": "NH", "naihati": "NH",
-  "হালিশহর": "HLR", "halisahar": "HLR",
-  "কাঁচরাপাড়া": "KPA", "kanchrapara": "KPA",
-  "কল্যাণী সীমান্ত": "KLYM", "kalyani simanta": "KLYM", "klym": "KLYM",
-  "কল্যাণী": "KYI", "kalyani": "KYI",
-  "মদনপুর": "MPJ", "madanpur": "MPJ",
-  "শিমুরালি": "SMX", "simurali": "SMX",
-  "পালপাড়া": "PXR", "পালপাড়া": "PXR", "palpara": "PXR",
-  "চাকদহ": "CDH", "chakdaha": "CDH",
-  "পায়রাডাঙ্গা": "PDX", "পায়রাডাঙ্গা": "PDX", "payradanga": "PDX",
-  "রানাঘাট": "RHA", "ranaghat": "RHA",
-  "কালিনারায়ণপুর": "KLNP", "kalinarayanpur": "KLNP",
-  "হবিবপুর": "HBE", "habibpur": "HBE",
-  "ফুলিয়া": "FLU", "phulia": "FLU", "fulia": "FLU",
-  "শান্তিপুর": "STB", "shantipur": "STB",
-  "বাদকুল্লা": "BDZ", "badkulla": "BDZ",
-  "কৃষ্ণনগর": "KNJ", "krishnanagar": "KNJ",
-  "বেথুয়াডহরি": "BTY", "bethuadahari": "BTY",
-  "বেলডাঙ্গা": "BEB", "beldanga": "BEB",
-  "বহরমপুর": "BPC", "berhampore": "BPC", "berhampore court": "BPC",
-  "মুর্শিদাবাদ": "MBB", "murshidabad": "MBB",
-  "জিয়াগঞ্জ": "JJG", "jiaganj": "JJG",
-  "ভগবানগোলা": "BQG", "bhagwangola": "BQG",
-  "লালগোলা": "LGL", "lalgola": "LGL",
+  "শিয়ালদা": "SDAH", "sealdah": "SDAH", "sdah": "SDAH", "শিয়ালদহ": "SDAH", "सियालदह": "SDAH",
+  "বিধাননগর": "BNXR", "bidhannagar": "BNXR", "बिधाननगर": "BNXR",
+  "দমদম ক্যান্টনমেন্ট": "DDC", "dum dum cantt": "DDC", "दमदम कैंट": "DDC",
+  "দমদম": "DDJ", "dumdum": "DDJ", "ddj": "DDJ", "दमदम": "DDJ",
+  "বেলঘড়িয়া": "BLH", "বেলঘড়িয়া": "BLH", "belgharia": "BLH", "बेलघरिया": "BLH",
+  "আগরপাড়া": "AGP", "agarpara": "AGP", "अगरपाड़ा": "AGP",
+  "সোদপুর": "SEP", "sodepur": "SEP", "सोदपुर": "SEP",
+  "খড়দহ": "KDH", "khardaha": "KDH", "खरदह": "KDH",
+  "টিটাগড়": "TGH", "titagarh": "TGH", "टीटागढ़": "TGH",
+  "ব্যারাকপুর": "BP", "barrackpore": "BP", "बैरकपुर": "BP",
+  "পলতা": "PTF", "palta": "PTF", "पलता": "PTF",
+  "ইছাপুর": "IP", "ichhapur": "IP", "इछापुर": "IP",
+  "শ্যামনগর": "SNR", "shyamnagar": "SNR", "श्यामनगर": "SNR",
+  "জগদ্দল": "JGDL", "jagaddal": "JGDL", "जगद्दल": "JGDL",
+  "কাঁকিনাড়া": "KNR", "kankinara": "KNR", "कांकीनारा": "KNR",
+  "নৈহাটি": "NH", "naihati": "NH", "नैहाटी": "NH",
+  "হালিশহর": "HLR", "halisahar": "HLR", "हालीशहर": "HLR",
+  "কাঁচরাপাড়া": "KPA", "kanchrapara": "KPA", "कांचरापाड़ा": "KPA",
+  "কল্যাণী সীমান্ত": "KLYM", "kalyani simanta": "KLYM", "कल्याणी सीमांत": "KLYM",
+  "কল্যাণী": "KYI", "kalyani": "KYI", "कल्याणी": "KYI",
+  "মদনপুর": "MPJ", "madanpur": "MPJ", "मदनपुर": "MPJ",
+  "শিমুরালি": "SMX", "simurali": "SMX", "शिमुरालि": "SMX",
+  "পালপাড়া": "PXR", "পালপাড়া": "PXR", "palpara": "PXR", "पालपाड़ा": "PXR",
+  "চাকদহ": "CDH", "chakdaha": "CDH", "चाकदह": "CDH",
+  "পায়রাডাঙ্গা": "PDX", "পায়রাডাঙ্গা": "PDX", "payradanga": "PDX", "पायराडांगा": "PDX",
+  "রানাঘাট": "RHA", "ranaghat": "RHA", "राणाघाट": "RHA",
+  "কালিনারায়ণপুর": "KLNP", "kalinarayanpur": "KLNP", "काली नारायणपुर": "KLNP",
+  "হবিবপুর": "HBE", "habibpur": "HBE", "हबीबपुर": "HBE",
+  "ফুলিয়া": "FLU", "phulia": "FLU", "fulia": "FLU", "फुलिया": "FLU",
+  "শান্তিপুর": "STB", "shantipur": "STB", "शांतिपुर": "STB",
+  "বাদকুল্লা": "BDZ", "badkulla": "BDZ", "बादकुल्ला": "BDZ",
+  "কৃষ্ণনগর": "KNJ", "krishnanagar": "KNJ", "कृष्णनगर": "KNJ",
+  "বেথুয়াডহরি": "BTY", "bethuadahari": "BTY", "बेथुआडहरी": "BTY",
+  "বেলডাঙ্গা": "BEB", "beldanga": "BEB", "बेलडांगा": "BEB",
+  "বহরমপুর": "BPC", "berhampore": "BPC", "बहरमपुर": "BPC",
+  "মুর্শিদাবাদ": "MBB", "murshidabad": "MBB", "मुर्शिदाबाद": "MBB",
+  "জিয়াগঞ্জ": "JJG", "jiaganj": "JJG", "जियागंज": "JJG",
+  "ভগবানগোলা": "BQG", "bhagwangola": "BQG", "भगवानगोला": "BQG",
+  "লালগোলা": "LGL", "lalgola": "LGL", "लालगोला": "LGL",
   
-  "বিরাটি": "BBT", "birati": "BBT",
-  "নিউ ব্যারাকপুর": "NBE", "new barrackpore": "NBE",
-  "মধ্যমগ্রাম": "MMG", "madhyamgram": "MMG",
-  "হৃদয়পুর": "HHR", "hridaypur": "HHR",
-  "বারাসত": "BT", "বারাসাত": "BT", "barasat": "BT",
-  "বামনগাছি": "BMG", "bamangachhi": "BMG",
-  "দত্তপুকুর": "DTK", "dattapukur": "DTK",
-  "বিড়া": "BIRA", "bira": "BIRA",
-  "গুমা": "GUMA", "guma": "GUMA",
-  "অশোকনগর": "ASKR", "ashoknagar": "ASKR",
-  "হাবরা": "HB", "habra": "HB",
-  "মছলন্দপুর": "MSL", "machhalandapur": "MSL",
-  "গোবরডাঙ্গা": "GBG", "gobardanga": "GBG",
-  "ঠাকুরনগর": "TKNR", "thakurnagar": "TKNR",
-  "চাঁদপাড়া": "CDP", "chandpara": "CDP",
-  "বনগাঁ": "BNJ", "bongaon": "BNJ",
-  "কাজলালী": "KZPB", "kazipara": "KZPB",
-  "কাদম্বগাছি": "KBGH", "kadambagachi": "KBGH",
-  "বসিরহাট": "BSHT", "basirhat": "BSHT",
-  "টাকি": "TKF", "taki": "TKF",
-  "হাসনাবাদ": "HNB", "hasnabad": "HNB",
+  "বিরাটি": "BBT", "birati": "BBT", "बिराटी": "BBT",
+  "নিউ ব্যারাকপুর": "NBE", "new barrackpore": "NBE", "न्यू बैरकपुर": "NBE",
+  "মধ্যমগ্রাম": "MMG", "madhyamgram": "MMG", "मध्यमग्राम": "MMG",
+  "হৃদয়পুর": "HHR", "hridaypur": "HHR", "हृदयपुर": "HHR",
+  "বারাসত": "BT", "বারাসাত": "BT", "barasat": "BT", "बारासात": "BT",
+  "বামনগাছি": "BMG", "bamangachhi": "BMG", "बामनगाछी": "BMG",
+  "দত্তপুকুর": "DTK", "dattapukur": "DTK", "दत्तपुकुर": "DTK",
+  "বিড়া": "BIRA", "bira": "BIRA", "बीरा": "BIRA",
+  "গুমা": "GUMA", "guma": "GUMA", "गुमा": "GUMA",
+  "অশোকনগর": "ASKR", "ashoknagar": "ASKR", "अशोकनगर": "ASKR",
+  "হাবরা": "HB", "habra": "HB", "हाबरा": "HB",
+  "মছলন্দপুর": "MSL", "machhalandapur": "MSL", "मछलंदपुर": "MSL",
+  "গোবরডাঙ্গা": "GBG", "gobardanga": "GBG", "गोबरडांगा": "GBG",
+  "ঠাকুরনগর": "TKNR", "thakurnagar": "TKNR", "ठाकुरनगर": "TKNR",
+  "চাঁদপাড়া": "CDP", "chandpara": "CDP", "चांदपाड़ा": "CDP",
+  "বনগাঁ": "BNJ", "bongaon": "BNJ", "बनगांव": "BNJ",
+  "কাজলালী": "KZPB", "kazipara": "KZPB", "काजीपाड़ा": "KZPB",
+  "কাদম্বগাছি": "KBGH", "kadambagachi": "KBGH", "कदंबगाछी": "KBGH",
+  "বসিরহাট": "BSHT", "basirhat": "BSHT", "बसीरहाट": "BSHT",
+  "টাকি": "TKF", "taki": "TKF", "टाकी": "TKF",
+  "হাসনাবাদ": "HNB", "hasnabad": "HNB", "हासनाबाद": "HNB",
 
-  "পার্ক সার্কাস": "PQS", "park circus": "PQS",
-  "বালিগঞ্জ": "BLN", "ballygunge": "BLN",
-  "ঢাকুরিয়া": "DHK", "dhakuria": "DHK",
-  "যাদবপুর": "JDP", "jadavpur": "JDP",
-  "বাঘাযতীন": "BGJT", "baghajatin": "BGJT",
-  "নিউ গড়িয়া": "NGRI", "new garia": "NGRI",
-  "গড়িয়া": "GIA", "garia": "GIA",
-  "নরেন্দ্রপুর": "NRPR", "narendrapur": "NRPR",
-  "সোনারপুর": "SPR", "sonarpur": "SPR",
-  "সুভাষ গ্রাম": "MAK", "subhas gram": "MAK",
-  "বারুইপুর": "BRP", "baruipur": "BRP",
-  "জয়নগর": "JNM", "jaynagar": "JNM",
-  "কাকদ্বীপ": "KWDP", "kakdwip": "KWDP",
-  "নামখানা": "NMKA", "namkhana": "NMKA",
-  "ডায়মন্ড হারবার": "DH", "diamond harbour": "DH",
-  "ক্যানিং": "CG", "canning": "CG",
-  "মাজেরহাট": "MJT", "majerhat": "MJT",
-  "বজবজ": "BGB", "budge budge": "BGB"
+  "পার্ক সার্কাস": "PQS", "park circus": "PQS", "पार्क सर्कस": "PQS",
+  "বালিগঞ্জ": "BLN", "ballygunge": "BLN", "बालीगंज": "BLN",
+  "ঢাকুরিয়া": "DHK", "dhakuria": "DHK", "ढाकुरिया": "DHK",
+  "যাদবপুর": "JDP", "jadavpur": "JDP", "जादवपुर": "JDP",
+  "বাঘাযতীন": "BGJT", "baghajatin": "BGJT", "बाघाजतिन": "BGJT",
+  "নিউ গড়িয়া": "NGRI", "new garia": "NGRI", "न्यू गरिया": "NGRI",
+  "গড়িয়া": "GIA", "garia": "GIA", "गरिया": "GIA",
+  "নরেন্দ্রপুর": "NRPR", "narendrapur": "NRPR", "नरेंद्रपुर": "NRPR",
+  "সোনারপুর": "SPR", "sonarpur": "SPR", "सोनारपुर": "SPR",
+  "সুভাষ গ্রাম": "MAK", "subhas gram": "MAK", "सुभाष ग्राम": "MAK",
+  "বারুইপুর": "BRP", "baruipur": "BRP", "बारुईपुर": "BRP",
+  "জয়নগর": "JNM", "jaynagar": "JNM", "जयनगर": "JNM",
+  "মथুরापुर": "MPRD", "mathurapur": "MPRD", "मथुरापुर": "MPRD",
+  "কাকদ্বীপ": "KWDP", "kakdwip": "KWDP", "काकद्वीप": "KWDP",
+  "নামখানা": "NMKA", "namkhana": "NMKA", "नामखाना": "NMKA",
+  "ডায়মন্ড হারবার": "DH", "diamond harbour": "DH", "डायमंड हार्बर": "DH",
+  "ক্যানিং": "CG", "canning": "CG", "कैनिंग": "CG",
+  "মাজেরহাট": "MJT", "majerhat": "MJT", "माजेरहाट": "MJT",
+  "বজবজ": "BGB", "budge budge": "BGB", "बजबज": "BGB"
 };
 
 // =========================================================
-// SMART NLP STATION EXTRACTOR (Reads Natural Sentences)
+// SMART NLP STATION EXTRACTOR (Trilingual)
 // =========================================================
 function extractStationsFromText(text) {
   let normalized = cleanText(text);
@@ -275,7 +291,6 @@ async function handleBetween(from, to, lang) {
     const trains = result?.data?.trains || result?.trains || [];
     if (trains.length === 0) return LANG[lang].noTrn;
 
-    // Time Filtering Logic (Current IST Time)
     const now = new Date();
     const currentIST = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
     let minTime = currentIST.getHours() * 60 + currentIST.getMinutes();
@@ -284,7 +299,7 @@ async function handleBetween(from, to, lang) {
     
     if (filtered.length === 0) return LANG[lang].noTrnToday;
     
-    filtered = filtered.slice(0, 7); // Max 7 trains
+    filtered = filtered.slice(0, 7);
 
     let fromName = result?.data?.from?.name || from;
     let toName = result?.data?.to?.name || to;
@@ -305,7 +320,7 @@ async function handleLive(tNum, lang) {
     const r = await railRadarGet(`/v1/trains/${tNum}/live`, { authoritative: "true" });
     const d = r?.data || r; if(!d) return LANG[lang].liveErr;
     let rep = `🚆 *${d.trainNumber||"-"} ${d.train?.name||""}*\n\n📍 *Status:* ${d.status||"-"}\n`;
-    if(d.delayMinutes>0) rep+=`⏱️️ Delay: ${d.delayMinutes} mins\n`;
+    if(d.delayMinutes>0) rep+=`⏱️ Delay: ${d.delayMinutes} mins\n`;
     if(d.currentLocation?.stationCode) rep+=`📍 Station: ${d.currentLocation.stationCode} (${d.currentLocation.status})\n`;
     return rep.trim();
   } catch(e) { return LANG[lang].liveErr; }
@@ -350,7 +365,7 @@ async function getWhatsAppMedia(mediaId) {
 async function processTextCommand(rawTxt, from, lang) {
   const txt = cleanText(rawTxt);
   
-  if (["hi", "hello", "menu", "হ্যালো", "হাই"].includes(txt)) { return LANG[lang].welcome; }
+  if (["hi", "hello", "menu", "হ্যালো", "হাই", "नमस्ते"].includes(txt)) { return LANG[lang].welcome; }
   if (["lang", "language", "ভাষা", "भाषा"].includes(txt)) { await sendLanguageButtons(from); return null; }
   
   const pnrMatch = bengaliToEnglishDigits(rawTxt).match(/\b\d{10}\b/);
@@ -359,17 +374,24 @@ async function processTextCommand(rawTxt, from, lang) {
   if (pnrMatch) { return await handlePNR(pnrMatch[0], lang); }
   if (trainMatch) { return await handleLive(trainMatch[0], lang); }
   
-  // Smart NLP Station Matching
   const foundStations = extractStationsFromText(rawTxt);
+  
+  // Trilingual Regex check for separators: "to", "থেকে", "-", "se", "से"
+  let routeMatch = rawTxt.match(/(.+?)\s+(থেকে|to|-|se|से)\s+(.+)/i);
   
   if (foundStations.length >= 2) {
      let f = foundStations[0].code;
      let t = foundStations[1].code;
+     // Handle specific "from X to Y" if routeMatch is clearly identified
+     if (routeMatch) {
+         let rawF = extractStationsFromText(routeMatch[1])[0]?.code;
+         let rawT = extractStationsFromText(routeMatch[3])[0]?.code;
+         if (rawF && rawT) { f = rawF; t = rawT; }
+     }
      return await handleBetween(f, t, lang);
   } 
   else if (foundStations.length === 1) {
      let stnName = foundStations[0].name.split(" ")[0]; 
-     // Instead of forcing SDAH, ask the user clearly.
      let replyMsg = LANG[lang].askSpecific.replace(/{stn}/g, stnName);
      return replyMsg;
   }
@@ -418,7 +440,7 @@ app.post("/webhook", async (req, res) => {
       reply = await processTextCommand(message.text.body, from, lang);
     }
 
-    // --- VOICE MESSAGE HANDLER (NEW FEATURE) ---
+    // --- VOICE MESSAGE HANDLER (MULTI-LANGUAGE AI) ---
     else if (message.type === "audio" || message.type === "voice") {
        const audioObj = message.audio || message.voice;
        if (audioObj && audioObj.id && ai) {
@@ -427,12 +449,13 @@ app.post("/webhook", async (req, res) => {
            if (media) {
                const b64 = media.buffer.toString("base64");
                try {
+                  // AI translates any audio (Hindi/Eng/Ben) to Bengali text for internal system processing
                   const aiResp = await ai.models.generateContent({
                      model: "gemini-1.5-flash",
                      contents: [
                         { role: "user", parts: [
                            { inlineData: { data: b64, mimeType: media.mimeType || "audio/ogg" } },
-                           { text: "Listen to this audio and write down the exact text in Bengali. Just output the transcription." }
+                           { text: "Listen to this audio (it can be in Bengali, Hindi, or English). Translate and transcribe the exact meaning into Bengali text. Only output the Bengali text, nothing else." }
                         ]}
                      ]
                   });
@@ -716,13 +739,11 @@ app.get("/", (req, res) => {
       }
       map.eachLayer(layer => { if(layer instanceof L.Marker || layer instanceof L.GeoJSON) map.removeLayer(layer); });
 
-      // Draw Route
       if(data.geojson) {
         const route = L.geoJSON(data.geojson, { style: { color: '#3b82f6', weight: 4 } }).addTo(map);
         map.fitBounds(route.getBounds());
       }
       
-      // Plot Live Exact Coordinate!
       const currentCode = data.currentLocation?.stationCode;
       let currentStop = data.stops?.find(s => s.code === currentCode);
       
