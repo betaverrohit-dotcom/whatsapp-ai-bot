@@ -21,78 +21,51 @@ const BOT_PHONE = process.env.BOT_PHONE || "917003089284";
 
 const ai = GEMINI_API_KEY ? new GoogleGenAI({ apiKey: GEMINI_API_KEY }) : null;
 
-// =========================================================
-// STATE MANAGEMENT (For Premium Dropdown Flow)
-// =========================================================
+// User Language Preference Memory
 const userPrefs = {}; 
-const userState = {}; 
 
 /* =========================================================
-   MULTI-LANGUAGE DICTIONARY 
+   MULTI-LANGUAGE DICTIONARY (SIMPLE & FAST)
 ========================================================= */
 const LANG = {
   en: {
-    welcomeTitle: "🚆 Sealdah Transit Hub",
-    welcomeBody: "Welcome to our Premium Railway Assistant!\n\nPlease select an option from the menu below to continue.",
-    btnMenu: "☰ Open Menu",
-    mPnr: "🎫 PNR Status", mLive: "📡 Live Train Status", mRoute: "🗺️ Search Trains", mLang: "🌐 Change Language",
-    askPnr: "Please type your *10-digit PNR Number* to check the status.\n(e.g., 6508967728)",
-    askLive: "Please type the *5-digit Train Number* to check live status.\n(e.g., 31530)",
-    askFrom: "📍 *Departure Station*\nPlease select your starting station from the list below.\n\n_(If your station is not listed, tap 'Type Manually')_",
-    askTo: "🎯 *Destination Station*\nPlease select your destination station.",
-    btnSelect: "🔽 Select Station",
-    langSet: "Language set to English! ✅\n\n⚠️ *Note:* Train search feature is only for Sealdah suburban (local) trains, not for Mail/Express trains.",
+    welcome: "🚆 *Welcome to Sealdah Train Bot!*\n\n⚠️ _Note: Train search is only for Sealdah suburban (local) trains, not for Mail/Express._\n\n👉 *How to use:*\n• Type route: *SDAH to NH* or *Kalyani to Palpara*\n• Live status: *Live 31530*\n• PNR check: *PNR 1234567890*",
+    langSet: "Language set to English! ✅",
     pnrErr: "❌ PNR information not found.",
     liveErr: "❌ Live status not found.",
-    btnErr: "❌ Route data not found.",
+    btnErr: "❌ Route or train data not found. Please check station names.",
     noTrn: "🚆 No trains found on this route.",
     noTrnToday: "🚆 No more trains available today.",
     locTrack: "📍 Location tracked!\nYou are near",
     nextSdah: "⏳ Next trains towards Sealdah:",
     askDest: "Where do you want to go? (e.g., SDAH to KNJ)",
     locErr: "Sorry, no nearby station found.",
-    errMedia: "Sorry, I only accept Text Message and Current Location 📍.",
-    sessionErr: "⏳ Session expired. Please open the menu and click 'Search Trains' again.",
-    typeManual: "✍️ *Manual Search:*\nPlease type your starting and destination station in the chat.\n\nExample:\n👉 *Madhyamgram to Barasat*\n👉 *Kalyani to Palpara*"
+    errMedia: "Sorry, I only accept Text Messages and Current Location 📍.",
+    status: "Status", delay: "Delay", min: "mins", cStn: "Current Station", cState: "Current State",
+    nStn: "Next Station", pStn: "Prev Station", upd: "Last Updated"
   },
   hi: {
-    welcomeTitle: "🚆 सियालदह ट्रांजिट हब",
-    welcomeBody: "हमारे प्रीमियम रेलवे असिस्टेंट में आपका स्वागत है!\n\nकृपया जारी रखने के लिए नीचे दिए गए मेनू से एक विकल्प चुनें।",
-    btnMenu: "☰ मेनू खोलें",
-    mPnr: "🎫 PNR स्थिति", mLive: "📡 लाइव ट्रेन स्थिति", mRoute: "🗺️ ट्रेन खोजें", mLang: "🌐 भाषा बदलें",
-    askPnr: "कृपया अपनी स्थिति जांचने के लिए *10-अंकीय PNR नंबर* टाइप करें।\n(उदा: 6508967728)",
-    askLive: "कृपया लाइव स्थिति जांचने के लिए *5-अंकीय ट्रेन नंबर* टाइप करें।\n(उदा: 31530)",
-    askFrom: "📍 *प्रस्थान स्टेशन*\nकृपया नीचे दी गई सूची से अपना स्टेशन चुनें।\n\n_(यदि आपका स्टेशन सूचीबद्ध नहीं है, तो 'Type Manually' चुनें)_",
-    askTo: "🎯 *गंतव्य स्टेशन*\nकृपया अपना गंतव्य स्टेशन चुनें।",
-    btnSelect: "🔽 स्टेशन चुनें",
-    langSet: "भाषा हिन्दी में सेट कर दी गई है! ✅\n\n⚠️ *नोट:* ट्रेन सर्च सुविधा केवल सियालदह लोकल ट्रेनों के लिए है, मेल/एक्सप्रेस के लिए नहीं।",
+    welcome: "🚆 *सियालदह ट्रेन बॉट में आपका स्वागत है!*\n\n⚠️ _नोट: ट्रेन सर्च केवल सियालदह लोकल ट्रेनों के लिए है, मेल/एक्सप्रेस के लिए नहीं।_\n\n👉 *कैसे उपयोग करें:*\n• रूट लिखें: *SDAH to NH* या *Kalyani to Palpara*\n• लाइव स्थिति: *Live 31530*\n• PNR चेक: *PNR 1234567890*",
+    langSet: "भाषा हिन्दी में सेट कर दी गई है! ✅",
     pnrErr: "❌ PNR की जानकारी नहीं मिली।",
     liveErr: "❌ लाइव स्थिति नहीं मिली।",
-    btnErr: "❌ रूट डेटा नहीं मिला।",
+    btnErr: "❌ रूट या ट्रेन डेटा नहीं मिला।",
     noTrn: "🚆 इस रूट पर कोई ट्रेन नहीं मिली।",
     noTrnToday: "🚆 आज के लिए कोई और ट्रेन उपलब्ध नहीं है।",
     locTrack: "📍 स्थान ट्रैक किया गया!\nआप वर्तमान में इसके पास हैं",
     nextSdah: "⏳ सियालदह की ओर अगली ट्रेनें:",
     askDest: "आप कहाँ जाना चाहते हैं? (उदा: SDAH to KNJ)",
     locErr: "क्षमा करें, कोई नजदीकी स्टेशन नहीं मिला।",
-    errMedia: "क्षमा करें, मैं केवल टेक्स्ट और वर्तमान स्थान 📍 स्वीकार करता हूँ।",
-    sessionErr: "⏳ सत्र समाप्त हो गया। कृपया मेनू खोलें और फिर से 'ट्रेन खोजें' पर क्लिक करें।",
-    typeManual: "✍️ *मैनुअल सर्च:*\nकृपया अपने प्रस्थान और गंतव्य स्टेशन को चैट में टाइप करें।\n\nउदाहरण:\n👉 *Madhyamgram to Barasat*\n👉 *Kalyani to Palpara*"
+    errMedia: "क्षमा करें, मैं केवल टेक्स्ट और स्थान 📍 स्वीकार करता हूँ।",
+    status: "स्थिति", delay: "देरी", min: "मिनट", cStn: "वर्तमान स्टेशन", cState: "वर्तमान स्थिति",
+    nStn: "अगला स्टेशन", pStn: "पिछला स्टेशन", upd: "अंतिम अपडेट"
   },
   bn: {
-    welcomeTitle: "🚆 শিয়ালদা ট্রানজিট হাব",
-    welcomeBody: "আমাদের প্রিমিয়াম রেলওয়ে অ্যাসিস্ট্যান্টে আপনাকে স্বাগতম!\n\nপরবর্তী ধাপের জন্য অনুগ্রহ করে নিচের মেনু থেকে আপনার বিকল্পটি বেছে নিন।",
-    btnMenu: "☰ মেনু খুলুন",
-    mPnr: "🎫 PNR স্ট্যাটাস", mLive: "📡 লাইভ ট্রেনের অবস্থা", mRoute: "🗺️ ট্রেন খুঁজুন", mLang: "🌐 ভাষা পরিবর্তন",
-    askPnr: "স্ট্যাটাস চেক করতে অনুগ্রহ করে আপনার *১০-ডিজিটের PNR নম্বরটি* টাইপ করে পাঠান।\n(যেমন: 6508967728)",
-    askLive: "লাইভ স্ট্যাটাস দেখতে অনুগ্রহ করে *৫-ডিজিটের ট্রেন নম্বরটি* টাইপ করে পাঠান।\n(যেমন: 31530)",
-    askFrom: "📍 *যাত্রার শুরুর স্টেশন*\nনিচের লিস্ট থেকে আপনি কোথা থেকে যাত্রা শুরু করবেন তা বেছে নিন।\n\n_(আপনার স্টেশন লিস্টে না থাকলে 'Type Manually' অপশনটি বেছে নিন)_",
-    askTo: "🎯 *গন্তব্য স্টেশন*\nআপনি কোথায় যেতে চান তা নিচের লিস্ট থেকে বেছে নিন।",
-    btnSelect: "🔽 স্টেশন বেছে নিন",
-    langSet: "আপনার ভাষা বাংলা সেট করা হয়েছে! ✅\n\n⚠️ *বিশেষ দ্রষ্টব্য:* ট্রেন সার্চ শুধুমাত্র শিয়ালদা লোকাল ট্রেনের জন্য প্রযোজ্য, মেল বা এক্সপ্রেসের জন্য নয়।",
+    welcome: "🚆 *শিয়ালদা ট্রেন বটে স্বাগতম!*\n\n⚠️ _বিশেষ দ্রষ্টব্য: এই সার্ভিসটি শুধুমাত্র শিয়ালদা লোকাল ট্রেনের জন্য, মেল বা এক্সপ্রেসের জন্য নয়।_\n\n👉 *কীভাবে ব্যবহার করবেন:*\n• রুট জানতে লিখুন: *শিয়ালদা থেকে শান্তিপুর* বা *কল্যাণী থেকে পালপাড়া*\n• লাইভ স্ট্যাটাস: *Live 31530*\n• PNR চেক: *PNR 1234567890*",
+    langSet: "ভাষা বাংলা সেট করা হয়েছে! ✅",
     pnrErr: "❌ PNR-এর তথ্য পাওয়া যাচ্ছে না।",
     liveErr: "❌ ট্রেনের লাইভ স্ট্যাটাস পাওয়া যাচ্ছে না।",
-    btnErr: "❌ ট্রেনের ডেটা পাওয়া যাচ্ছে না।",
+    btnErr: "❌ ট্রেনের ডেটা পাওয়া যাচ্ছে না। স্টেশনের নাম সঠিক করে লিখুন।",
     noTrn: "🚆 এই রুটে কোনো ট্রেন পাওয়া যায়নি।",
     noTrnToday: "🚆 আজকের জন্য আর কোনো ট্রেন উপলব্ধ নেই।",
     locTrack: "📍 আপনার লোকেশন ট্র্যাক করা হয়েছে!\nআপনি বর্তমানে কাছাকাছি আছেন",
@@ -100,107 +73,32 @@ const LANG = {
     askDest: "আপনি কোথায় যেতে চান? (যেমন: শিয়ালদা থেকে রানাঘাট)",
     locErr: "দুঃখিত, আপনার কাছাকাছি কোনো স্টেশন পাওয়া যায়নি।",
     errMedia: "দুঃখিত, আমি শুধুমাত্র Text Message এবং Current Location 📍 গ্রহণ করতে পারি।",
-    sessionErr: "⏳ সেশন শেষ হয়ে গেছে। অনুগ্রহ করে মেনু খুলে আবার 'ট্রেন খুঁজুন' অপশনে ক্লিক করুন।",
-    typeManual: "✍️ *ম্যানুয়াল সার্চ:*\nআপনি যে স্টেশন থেকে যেখানে যেতে চান, তা সরাসরি চ্যাটে লিখে পাঠান।\n\nউদাহরণ:\n👉 *মধ্যমগ্রাম থেকে বারাসত*\n👉 *কল্যাণী থেকে পালপাড়া*\n👉 *নামখানা থেকে শিয়ালদা*"
+    status: "স্ট্যাটাস", delay: "বিলম্ব", min: "মিনিট", cStn: "বর্তমান স্টেশন", cState: "বর্তমান অবস্থা",
+    nStn: "পরবর্তী স্টেশন", pStn: "আগের স্টেশন", upd: "শেষ আপডেট"
   }
 };
 
 /* =========================================================
-   SEND INTERACTIVE MENUS
+   SEND BUTTON MENUS (WhatsApp Cloud API)
 ========================================================= */
-async function sendInteractiveList(to, headerText, bodyText, buttonText, sections) {
+async function sendLanguageButtons(to) {
   try {
     const url = `https://graph.facebook.com/v22.0/${PHONE_NUMBER_ID}/messages`;
     await axios.post(url, {
       messaging_product: "whatsapp", recipient_type: "individual", to: to, type: "interactive",
       interactive: {
-        type: "list",
-        header: { type: "text", text: headerText },
-        body: { text: bodyText },
-        footer: { text: "Sumanmusix" },
-        action: { button: buttonText.substring(0, 20), sections: sections } 
+        type: "button",
+        body: { text: "🗣️ Choose your language / ভাষা বেছে নিন / भाषा चुनें:" },
+        action: {
+          buttons: [
+            { type: "reply", reply: { id: "lang_bn", title: "বাংলা" } },
+            { type: "reply", reply: { id: "lang_en", title: "English" } },
+            { type: "reply", reply: { id: "lang_hi", title: "हिन्दी" } }
+          ]
+        }
       }
     }, { headers: { Authorization: `Bearer ${WHATSAPP_TOKEN}`, "Content-Type": "application/json" } });
-  } catch (error) { console.error("Interactive Error:", error.response?.data || error.message); }
-}
-
-async function sendLanguageMenu(to) {
-  await sendInteractiveList(to, "🗣️ Select Language", "Welcome to Sealdah Train Bot! 🚆\nPlease select your preferred language:\nঅনুগ্রহ করে আপনার ভাষা নির্বাচন করুন:", "🌐 Languages", [
-    { title: "Available Languages", rows: [
-      { id: "lang_bn", title: "বাংলা", description: "বাংলা ভাষায় কথা বলুন" },
-      { id: "lang_en", title: "English", description: "Chat in English" },
-      { id: "lang_hi", title: "हिन्दी", description: "हिंदी में चैट करें" }
-    ]}
-  ]);
-}
-
-async function sendMainMenu(to, lang) {
-  const t = LANG[lang];
-  await sendInteractiveList(to, t.welcomeTitle, t.welcomeBody, t.btnMenu, [
-    { title: "Main Services", rows: [
-      { id: "menu_route", title: t.mRoute, description: "Find local trains" },
-      { id: "menu_live", title: t.mLive, description: "Check train running status" },
-      { id: "menu_pnr", title: t.mPnr, description: "Check ticket status" },
-      { id: "menu_lang", title: t.mLang, description: "English / বাংলা / हिन्दी" }
-    ]}
-  ]);
-}
-
-// 30 Stations Maximum
-async function sendStationMenu(to, lang, isFrom) {
-  const t = LANG[lang];
-  const header = isFrom ? "📍 Departure" : "🎯 Destination";
-  const body = isFrom ? t.askFrom : t.askTo;
-
-  const sections = [
-    {
-      title: "Main Line",
-      rows: [
-        { id: "stn_SDAH", title: "Sealdah (SDAH)", description: "শিয়ালদা" },
-        { id: "stn_DDJ", title: "Dum Dum (DDJ)", description: "দমদম জংশন" },
-        { id: "stn_BNXR", title: "Bidhannagar (BNXR)", description: "বিধাননগর রোড" },
-        { id: "stn_BP", title: "Barrackpore (BP)", description: "ব্যারাকপুর" },
-        { id: "stn_NH", title: "Naihati (NH)", description: "নৈহাটি জংশন" },
-        { id: "stn_KYI", title: "Kalyani (KYI)", description: "কল্যাণী" },
-        { id: "stn_RHA", title: "Ranaghat (RHA)", description: "রানাঘাট জংশন" },
-        { id: "stn_STB", title: "Shantipur (STB)", description: "শান্তিপুর" },
-        { id: "stn_KNJ", title: "Krishnanagar (KNJ)", description: "কৃষ্ণনগর" },
-        { id: "stn_LGL", title: "Lalgola (LGL)", description: "লালগোলা" }
-      ]
-    },
-    {
-      title: "Bongaon & South Line",
-      rows: [
-        { id: "stn_BT", title: "Barasat (BT)", description: "বারাসত" },
-        { id: "stn_MMG", title: "Madhyamgram (MMG)", description: "মধ্যমগ্রাম" },
-        { id: "stn_HB", title: "Habra (HB)", description: "হাবরা" },
-        { id: "stn_BNJ", title: "Bongaon (BNJ)", description: "বনগাঁ" },
-        { id: "stn_BSHT", title: "Basirhat (BSHT)", description: "বসিরহাট" },
-        { id: "stn_BLN", title: "Ballygunge (BLN)", description: "বালিগঞ্জ" },
-        { id: "stn_JDP", title: "Jadavpur (JDP)", description: "যাদবপুর" },
-        { id: "stn_SPR", title: "Sonarpur (SPR)", description: "সোনারপুর" },
-        { id: "stn_BRP", title: "Baruipur (BRP)", description: "বারুইপুর" },
-        { id: "stn_DH", title: "Diamond Hbr (DH)", description: "ডায়মন্ড হারবার" }
-      ]
-    },
-    {
-      title: "Other Routes & Manual",
-      rows: [
-        { id: "stn_KWDP", title: "Kakdwip (KWDP)", description: "কাকদ্বীপ" },
-        { id: "stn_NMKA", title: "Namkhana (NMKA)", description: "নামখানা" },
-        { id: "stn_CG", title: "Canning (CG)", description: "ক্যানিং" },
-        { id: "stn_BGB", title: "Budge Budge (BGB)", description: "বজবজ" },
-        { id: "stn_HNB", title: "Hasnabad (HNB)", description: "হাসনাবাদ" },
-        { id: "stn_CDH", title: "Chakdaha (CDH)", description: "চাকদহ" },
-        { id: "stn_PTF", title: "Palta (PTF)", description: "পলতা" },
-        { id: "stn_SEP", title: "Sodepur (SEP)", description: "সোদপুর" },
-        { id: "stn_KNR", title: "Kankinara (KNR)", description: "কাঁকিনাড়া" },
-        { id: "cmd_type_manual", title: "✍️ Type Manually", description: "অন্য স্টেশন নিজে লিখে খুঁজুন" }
-      ]
-    }
-  ];
-
-  await sendInteractiveList(to, header, body, "🔽 Select Station", sections);
+  } catch (error) { console.error("Button Error:", error.message); }
 }
 
 async function sendWhatsAppMessage(to, text) {
@@ -246,78 +144,131 @@ function findPassengersArray(obj) {
   return [];
 }
 
+/* =========================================================
+   MASSIVE STATION DICTIONARY (EXHAUSTIVE SEALDAH DIVISION)
+========================================================= */
 const STATIONS = {
-  "শিয়ালদা": "SDAH", "sealdah": "SDAH", "sdah": "SDAH", "বিধাননগর": "BNXR", "bidhannagar": "BNXR",
-  "দমদম": "DDJ", "dumdum": "DDJ", "ddj": "DDJ", "বেলঘড়িয়া": "BLH", "belgharia": "BLH",
-  "আগরপাড়া": "AGP", "agarpara": "AGP", "সোদপুর": "SEP", "sodepur": "SEP",
-  "খড়দহ": "KDH", "khardaha": "KDH", "টিটাগড়": "TGH", "titagarh": "TGH",
-  "ব্যারাকপুর": "BP", "barrackpore": "BP", "পলতা": "PTF", "palta": "PTF",
-  "ইছাপুর": "IP", "ichhapur": "IP", "শ্যামনগর": "SNR", "shyamnagar": "SNR",
-  "জগদ্দল": "JGDL", "jagaddal": "JGDL", "কাঁকিনাড়া": "KNR", "kankinara": "KNR",
-  "নৈহাটি": "NH", "naihati": "NH", "হালিশহর": "HLR", "halisahar": "HLR",
-  "কাঁচরাপাড়া": "KPA", "kanchrapara": "KPA", "কল্যাণী": "KYI", "kalyani": "KYI",
-  "মদনপুর": "MPJ", "madanpur": "MPJ", "শিমুরালি": "SMX", "simurali": "SMX",
-  "পালপাড়া": "PXR", "পালপাড়া": "PXR", "palpara": "PXR", "চাকদহ": "CDH", "chakdaha": "CDH",
-  "পায়রাডাঙ্গা": "PDX", "payradanga": "PDX", "রানাঘাট": "RHA", "ranaghat": "RHA",
-  "কালিনারায়ণপুর": "KLNP", "kalinarayanpur": "KLNP", "হবিবপুর": "HBE", "habibpur": "HBE",
-  "ফুলিয়া": "FLU", "phulia": "FLU", "fulia": "FLU", "শান্তিপুর": "STB", "shantipur": "STB",
-  "বাদকুল্লা": "BDZ", "badkulla": "BDZ", "কৃষ্ণনগর": "KNJ", "krishnanagar": "KNJ",
-  "বেথুয়াডহরি": "BTY", "bethuadahari": "BTY", "বেলডাঙ্গা": "BEB", "beldanga": "BEB",
-  "বহরমপুর": "BPC", "berhampore": "BPC", "মুর্শিদাবাদ": "MBB", "murshidabad": "MBB",
-  "লালগোলা": "LGL", "lalgola": "LGL", "দমদম ক্যান্টনমেন্ট": "DDC", "dum dum cantt": "DDC",
-  "বিরাটি": "BBT", "birati": "BBT", "নিউ ব্যারাকপুর": "NBE", "new barrackpore": "NBE",
-  "মধ্যমগ্রাম": "MMG", "madhyamgram": "MMG", "হৃদয়পুর": "HHR", "hridaypur": "HHR",
-  "বারাসত": "BT", "বারাসাত": "BT", "barasat": "BT", "বামনগাছি": "BMG", "bamangachhi": "BMG",
-  "দত্তপুকুর": "DTK", "dattapukur": "DTK", "অশোকনগর": "ASKR", "ashoknagar": "ASKR",
-  "হাবরা": "HB", "habra": "HB", "মছলন্দপুর": "MSL", "machhalandapur": "MSL",
-  "গোবরডাঙ্গা": "GBG", "gobardanga": "GBG", "ঠাকুরনগর": "TKNR", "thakurnagar": "TKNR",
-  "চাঁদপাড়া": "CDP", "chandpara": "CDP", "বনগাঁ": "BNJ", "bongaon": "BNJ",
-  "বসিরহাট": "BSHT", "basirhat": "BSHT", "হাসনাবাদ": "HNB", "hasnabad": "HNB",
-  "পার্ক সার্কাস": "PQS", "park circus": "PQS", "বালিগঞ্জ": "BLN", "ballygunge": "BLN",
-  "ঢাকুরিয়া": "DHK", "dhakuria": "DHK", "যাদবপুর": "JDP", "jadavpur": "JDP",
-  "বাঘাযতীন": "BGJT", "baghajatin": "BGJT", "নিউ গড়িয়া": "NGRI", "new garia": "NGRI",
-  "গড়িয়া": "GIA", "garia": "GIA", "নরেন্দ্রপুর": "NRPR", "narendrapur": "NRPR",
-  "সোনারপুর": "SPR", "sonarpur": "SPR", "সুভাষ গ্রাম": "MAK", "subhas gram": "MAK",
-  "বারুইপুর": "BRP", "baruipur": "BRP", "ডায়মন্ড হারবার": "DH", "diamond harbour": "DH",
-  "জয়নগর": "JNM", "jaynagar": "JNM", "majilpur": "JNM", "কাকদ্বীপ": "KWDP", "kakdwip": "KWDP",
-  "নামখানা": "NMKA", "namkhana": "NMKA", "ক্যানিং": "CG", "canning": "CG",
-  "মাজেরহাট": "MJT", "majerhat": "MJT", "বজবজ": "BGB", "budge budge": "BGB",
-  "কলকাতা": "KOAA", "kolkata": "KOAA", "হাওড়া": "HWH", "howrah": "HWH"
+  // Main Line
+  "শিয়ালদা": "SDAH", "sealdah": "SDAH", "sdah": "SDAH",
+  "বিধাননগর": "BNXR", "bidhannagar": "BNXR",
+  "দমদম": "DDJ", "dumdum": "DDJ", "ddj": "DDJ",
+  "বেলঘড়িয়া": "BLH", "বেলঘড়িয়া": "BLH", "belgharia": "BLH",
+  "আগরপাড়া": "AGP", "agarpara": "AGP",
+  "সোদপুর": "SEP", "sodepur": "SEP",
+  "খড়দহ": "KDH", "khardaha": "KDH",
+  "টিটাগড়": "TGH", "titagarh": "TGH",
+  "ব্যারাকপুর": "BP", "barrackpore": "BP",
+  "পলতা": "PTF", "palta": "PTF",
+  "ইছাপুর": "IP", "ichhapur": "IP",
+  "শ্যামনগর": "SNR", "shyamnagar": "SNR",
+  "জগদ্দল": "JGDL", "jagaddal": "JGDL",
+  "কাঁকিনাড়া": "KNR", "kankinara": "KNR",
+  "নৈহাটি": "NH", "naihati": "NH",
+  "হালিশহর": "HLR", "halisahar": "HLR",
+  "কাঁচরাপাড়া": "KPA", "kanchrapara": "KPA",
+  "কল্যাণী": "KYI", "kalyani": "KYI",
+  "কল্যাণী সীমান্ত": "KLYM", "kalyani simanta": "KLYM", "klym": "KLYM",
+  "মদনপুর": "MPJ", "madanpur": "MPJ",
+  "শিমুরালি": "SMX", "simurali": "SMX",
+  "পালপাড়া": "PXR", "পালপাড়া": "PXR", "palpara": "PXR",
+  "চাকদহ": "CDH", "chakdaha": "CDH",
+  "পায়রাডাঙ্গা": "PDX", "পায়রাডাঙ্গা": "PDX", "payradanga": "PDX",
+  "রানাঘাট": "RHA", "ranaghat": "RHA",
+  "কালিনারায়ণপুর": "KLNP", "kalinarayanpur": "KLNP",
+  "হবিবপুর": "HBE", "habibpur": "HBE",
+  "ফুলিয়া": "FLU", "phulia": "FLU", "fulia": "FLU",
+  "শান্তিপুর": "STB", "shantipur": "STB",
+  "বাদকুল্লা": "BDZ", "badkulla": "BDZ",
+  "কৃষ্ণনগর": "KNJ", "krishnanagar": "KNJ",
+  "বেথুয়াডহরি": "BTY", "bethuadahari": "BTY",
+  "বেলডাঙ্গা": "BEB", "beldanga": "BEB",
+  "বহরমপুর": "BPC", "berhampore": "BPC", "berhampore court": "BPC",
+  "মুর্শিদাবাদ": "MBB", "murshidabad": "MBB",
+  "জিয়াগঞ্জ": "JJG", "jiaganj": "JJG",
+  "ভগবানগোলা": "BQG", "bhagwangola": "BQG",
+  "লালগোলা": "LGL", "lalgola": "LGL",
+  
+  // Bongaon & Hasnabad Line
+  "দমদম ক্যান্টনমেন্ট": "DDC", "dum dum cantt": "DDC",
+  "বিরাটি": "BBT", "birati": "BBT",
+  "নিউ ব্যারাকপুর": "NBE", "new barrackpore": "NBE",
+  "মধ্যমগ্রাম": "MMG", "madhyamgram": "MMG",
+  "হৃদয়পুর": "HHR", "hridaypur": "HHR",
+  "বারাসত": "BT", "বারাসাত": "BT", "barasat": "BT",
+  "বামনগাছি": "BMG", "bamangachhi": "BMG",
+  "দত্তপুকুর": "DTK", "dattapukur": "DTK",
+  "বিড়া": "BIRA", "bira": "BIRA",
+  "গুমা": "GUMA", "guma": "GUMA",
+  "অশোকনগর": "ASKR", "ashoknagar": "ASKR",
+  "হাবরা": "HB", "habra": "HB",
+  "মছলন্দপুর": "MSL", "machhalandapur": "MSL",
+  "গোবরডাঙ্গা": "GBG", "gobardanga": "GBG",
+  "ঠাকুরনগর": "TKNR", "thakurnagar": "TKNR",
+  "চাঁদপাড়া": "CDP", "chandpara": "CDP",
+  "বনগাঁ": "BNJ", "bongaon": "BNJ",
+  "কাজলালী": "KZPB", "kazipara": "KZPB",
+  "কাদম্বগাছি": "KBGH", "kadambagachi": "KBGH",
+  "বসিরহাট": "BSHT", "basirhat": "BSHT",
+  "টাকি": "TKF", "taki": "TKF",
+  "হাসনাবাদ": "HNB", "hasnabad": "HNB",
+
+  // South Section
+  "পার্ক সার্কাস": "PQS", "park circus": "PQS",
+  "বালিগঞ্জ": "BLN", "ballygunge": "BLN",
+  "ঢাকুরিয়া": "DHK", "dhakuria": "DHK",
+  "যাদবপুর": "JDP", "jadavpur": "JDP",
+  "বাঘাযতীন": "BGJT", "baghajatin": "BGJT",
+  "নিউ গড়িয়া": "NGRI", "new garia": "NGRI",
+  "গড়িয়া": "GIA", "garia": "GIA",
+  "নরেন্দ্রপুর": "NRPR", "narendrapur": "NRPR",
+  "সোনারপুর": "SPR", "sonarpur": "SPR",
+  "সুভাষ গ্রাম": "MAK", "subhas gram": "MAK",
+  "মল্লিকপুর": "MAK", "mallikpur": "MAK",
+  "বারুইপুর": "BRP", "baruipur": "BRP",
+  "জয়নগর": "JNM", "jaynagar": "JNM", "majilpur": "JNM",
+  "মথুরাপুর": "MPRD", "mathurapur": "MPRD",
+  "কাকদ্বীপ": "KWDP", "kakdwip": "KWDP",
+  "নামখানা": "NMKA", "namkhana": "NMKA",
+  "ডায়মন্ড হারবার": "DH", "diamond harbour": "DH",
+  "ক্যানিং": "CG", "canning": "CG",
+  "মাজেরহাট": "MJT", "majerhat": "MJT",
+  "বজবজ": "BGB", "budge budge": "BGB"
 };
 
-// BUG FIX: API works best with station codes. This checks the dictionary first, then falls back to API.
 async function resolveStation(val) {
   if (!val) return null;
-  // 1. Check local dictionary first
-  const normalized = cleanText(val);
-  const keys = Object.keys(STATIONS).sort((a, b) => b.length - a.length);
-  for (const key of keys) {
-    if (normalized.includes(cleanText(key))) return STATIONS[key];
-  }
-  const codeMatch = val.match(/\b[A-Za-z]{2,5}\b/);
+  let normalized = cleanText(val);
+  normalized = normalized.replace(/(যাব|যাওয়ার|যেতে|ট্রেন|কখন|train|going|station|স্টেশন)/gi, "").trim();
+
+  const codeMatch = normalized.match(/\b[A-Za-z]{2,5}\b/);
   if (codeMatch) {
     const code = codeMatch[0].toUpperCase();
     if (Object.values(STATIONS).includes(code)) return code;
   }
-  // 2. If not found, use API
+
+  for (const key in STATIONS) {
+    if (normalized.includes(key) || key.includes(normalized)) return STATIONS[key];
+  }
+
   try {
-    const res = await railRadarGet("/v1/lookup/search/stations", { q: val, limit: 1 });
+    const res = await railRadarGet("/v1/lookup/search/stations", { q: normalized, limit: 1 });
     return (res.data?.stations?.[0]?.code || res.stations?.[0]?.code || null);
   } catch(e) { return null; }
 }
 
 const STATION_COORDS = [
-  { name: "শিয়ালদা (Sealdah)", lat: 22.5675, lon: 88.3714, code: "SDAH" },
-  { name: "দমদম জংশন (Dum Dum Jn)", lat: 22.6225, lon: 88.3953, code: "DDJ" },
-  { name: "নৈহাটি জংশন (Naihati Jn)", lat: 22.8986, lon: 88.4182, code: "NH" },
-  { name: "কল্যাণী (Kalyani)", lat: 22.9750, lon: 88.4344, code: "KYI" },
-  { name: "রানাঘাট জংশন (Ranaghat Jn)", lat: 23.1764, lon: 88.5828, code: "RHA" },
-  { name: "শান্তিপুর (Shantipur)", lat: 23.2458, lon: 88.4326, code: "STB" },
-  { name: "কৃষ্ণনগর (Krishnanagar)", lat: 23.4013, lon: 88.4998, code: "KNJ" },
-  { name: "বারাসত জংশন (Barasat Jn)", lat: 22.7214, lon: 88.4804, code: "BT" },
-  { name: "বনগাঁ জংশন (Bongaon Jn)", lat: 23.0478, lon: 88.8256, code: "BNJ" },
-  { name: "বারুইপুর জংশন (Baruipur Jn)", lat: 22.3618, lon: 88.4316, code: "BRP" }
+  { name: "শিয়ালদা (SDAH)", lat: 22.5675, lon: 88.3714, code: "SDAH" },
+  { name: "দমদম জংশন (DDJ)", lat: 22.6225, lon: 88.3953, code: "DDJ" },
+  { name: "নৈহাটি জংশন (NH)", lat: 22.8986, lon: 88.4182, code: "NH" },
+  { name: "কল্যাণী (KYI)", lat: 22.9750, lon: 88.4344, code: "KYI" },
+  { name: "রানাঘাট জংশন (RHA)", lat: 23.1764, lon: 88.5828, code: "RHA" },
+  { name: "শান্তিপুর (STB)", lat: 23.2458, lon: 88.4326, code: "STB" },
+  { name: "কৃষ্ণনগর (KNJ)", lat: 23.4013, lon: 88.4998, code: "KNJ" },
+  { name: "বারাসত জংশন (BT)", lat: 22.7214, lon: 88.4804, code: "BT" },
+  { name: "বনগাঁ জংশন (BNJ)", lat: 23.0478, lon: 88.8256, code: "BNJ" },
+  { name: "বারুইপুর জংশন (BRP)", lat: 22.3618, lon: 88.4316, code: "BRP" }
 ];
+
 function getNearestStation(lat, lon) {
   let nearest = null, minD = Infinity;
   for (const s of STATION_COORDS) {
@@ -330,62 +281,74 @@ function getNearestStation(lat, lon) {
 }
 
 /* =========================================================
-   API CALLS & FORMATTERS
+   API CALLS & FORMATTERS (WITH CACHE-BUSTING FOR REAL-TIME ACCURACY)
 ========================================================= */
 async function railRadarGet(path, params = {}) {
+  // Adding cache-busting timestamp to force servers to return real-time data
+  params.ts = Date.now();
   const res = await axios.get(`${RAILRADAR_BASE}${path}`, { params, headers: { Authorization: `Bearer ${RAILRADAR_API_KEY}` } });
   return res.data;
 }
 
 async function handleBetween(from, to, lang) {
+  const t = LANG[lang];
   const date = getISTDate();
   try {
-    const result = await railRadarGet(`/v1/trains/between/${from}/${to}`, { date, live: "true" });
+    const result = await railRadarGet(`/v1/trains/between/${from}/${to}`, { date, live: "true", refresh: "true" });
     const trains = result?.data?.trains || result?.trains || [];
-    if (trains.length === 0) return LANG[lang].noTrn;
+    if (trains.length === 0) return t.noTrn;
 
-    // Time Filtering Logic
     const now = new Date();
     const currentIST = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
     let minTime = currentIST.getHours() * 60 + currentIST.getMinutes();
 
-    let filtered = trains.filter(t => timeToMinutes(t?.from?.departure || t?.departure) >= minTime);
+    let filtered = trains.filter(tr => timeToMinutes(tr?.from?.departure || tr?.departure) >= minTime);
     
-    if (filtered.length === 0) return LANG[lang].noTrnToday;
+    if (filtered.length === 0) return t.noTrnToday;
     
-    // Max 7 trains
-    filtered = filtered.slice(0, 7);
+    filtered = filtered.slice(0, 7); 
 
     let fromName = result?.data?.from?.name || from;
     let toName = result?.data?.to?.name || to;
 
     let rep = `🚆 *${fromName} ➡ ${toName}*\n📅 ${date}\n\n`;
     filtered.forEach((i, idx) => {
-      let t = i.train || {}; let d = i.live?.delayMinutes; let p = i.live?.platform;
-      rep += `*${idx+1}. 🚆 ${t.number||"-"} ${t.name||""}*\n   ⏰ ${formatTime(i.from?.departure||i.departure)} ➡ ${formatTime(i.to?.arrival||i.arrival)}\n`;
-      if(d>0) rep += `   ⏱️ Delay: ${d} mins | 🚉 Plat: ${p||"-"}\n`;
-      rep += `   📍 Live Track: https://wa.me/${BOT_PHONE}?text=Live+${t.number||"-"}\n\n`;
+      let tr = i.train || {}; let d = i.live?.delayMinutes; let p = i.live?.platform;
+      rep += `*${idx+1}. 🚆 ${tr.number||"-"} ${tr.name||""}*\n   ⏰ ${formatTime(i.from?.departure||i.departure)} ➡ ${formatTime(i.to?.arrival||i.arrival)}\n`;
+      if(d>0) rep += `   ⏱️ ${t.delay}: ${d} ${t.min} | 🚉 Plat: ${p||"-"}\n`;
+      rep += `   📍 Live Track: https://wa.me/${BOT_PHONE}?text=Live+${tr.number||"-"}\n\n`;
     });
     return rep.trim();
-  } catch(e) { return LANG[lang].btnErr; }
+  } catch(e) { return t.btnErr; }
 }
 
 async function handleLive(tNum, lang) {
+  const t = LANG[lang];
   try {
-    const r = await railRadarGet(`/v1/trains/${tNum}/live`, { authoritative: "true" });
-    const d = r?.data || r; if(!d) return LANG[lang].liveErr;
-    let rep = `🚆 *${d.trainNumber||"-"} ${d.train?.name||""}*\n\n📍 *Status:* ${d.status||"-"}\n`;
-    if(d.delayMinutes>0) rep+=`⏱️ Delay: ${d.delayMinutes} mins\n`;
-    if(d.currentLocation?.stationCode) rep+=`📍 Station: ${d.currentLocation.stationCode} (${d.currentLocation.status})\n`;
+    // strict caching bypass for highest accuracy
+    const r = await railRadarGet(`/v1/trains/${tNum}/live`, { authoritative: "true", refresh: "true" });
+    const d = r?.data || r; if(!d) return t.liveErr;
+    
+    let rep = `🚆 *${d.trainNumber||"-"} ${d.train?.name||""}*\n\n📍 *${t.status}:* ${d.status||"-"}\n`;
+    if(d.delayMinutes>0) rep+=`⏱️ ${t.delay}: ${d.delayMinutes} ${t.min}\n`;
+    if(d.currentLocation?.stationCode) rep+=`📍 ${t.cStn}: ${d.currentLocation.stationCode} (${d.currentLocation.status})\n`;
+    
+    if(d.nextHalt?.stationName || d.nextHalt?.stationCode) rep += `➡️ ${t.nStn}: ${d.nextHalt.stationName || d.nextHalt.stationCode}\n`;
+    if(d.previousHalt?.stationName || d.previousHalt?.stationCode) rep += `⬅️ ${t.pStn}: ${d.previousHalt.stationName || d.previousHalt.stationCode}\n`;
+    
+    // Explicitly show the last update time so passengers know if the GPS is lagging
+    if(d.lastUpdatedAt) rep += `\n🕒 *${t.upd}:* ${d.lastUpdatedAt}\n`;
+    
     return rep.trim();
-  } catch(e) { return LANG[lang].liveErr; }
+  } catch(e) { return t.liveErr; }
 }
 
 async function handlePNR(pnr, lang) {
+  const t = LANG[lang];
   try {
     const r = await railRadarGet(`/v1/pnr/${pnr}`);
     let d = r?.data || r || {}; if (d.pnrInfo) d = d.pnrInfo;
-    if (!d || Object.keys(d).length===0) return LANG[lang].pnrErr;
+    if (!d || Object.keys(d).length===0) return t.pnrErr;
     
     let rep = `🎫 *PNR Status: ${pnr}*\n━━━━━━━━━━━━━━\n`;
     rep += `🚆 Train: ${findData(d,['trainNo','trainNumber'])} | Date: ${findData(d,['journeyDate','date'])}\n`;
@@ -402,14 +365,16 @@ async function handlePNR(pnr, lang) {
       });
     }
     return rep.trim();
-  } catch(e) { return LANG[lang].pnrErr; }
+  } catch(e) { return t.pnrErr; }
 }
 
 /* =========================================================
-   WEBHOOK (THE MAGIC HAPPENS HERE)
+   WEBHOOK (SMOOTH, FAST & ACCURATE)
 ========================================================= */
 app.post("/webhook", async (req, res) => {
+  // Send 200 OK immediately for WhatsApp high-speed delivery
   res.sendStatus(200); 
+  
   try {
     const entry = req.body?.entry?.[0];
     const message = entry?.changes?.[0]?.value?.messages?.[0];
@@ -420,84 +385,50 @@ app.post("/webhook", async (req, res) => {
     const lang = userPrefs[from];
     let reply = "";
 
-    // --- 1. INTERACTIVE DROPDOWN HANDLER ---
+    // --- INTERACTIVE BUTTON HANDLER ---
     if (message.type === "interactive") {
-      const id = message.interactive.list_reply.id;
-      
-      if (id.startsWith("lang_")) {
+      const id = message.interactive.button_reply?.id;
+      if (id && id.startsWith("lang_")) {
         userPrefs[from] = id.split("_")[1];
         await sendWhatsAppMessage(from, LANG[userPrefs[from]].langSet);
-        setTimeout(() => sendMainMenu(from, userPrefs[from]), 1000);
+        setTimeout(() => sendWhatsAppMessage(from, LANG[userPrefs[from]].welcome), 1000);
         return;
-      }
-      
-      if (id === "menu_pnr") { userState[from] = { step: "pnr" }; reply = LANG[lang].askPnr; }
-      else if (id === "menu_live") { userState[from] = { step: "live" }; reply = LANG[lang].askLive; }
-      else if (id === "menu_lang") { await sendLanguageMenu(from); return; }
-      else if (id === "menu_route") { 
-        userState[from] = { step: "route_from" }; 
-        await sendStationMenu(from, lang, true); 
-        return; 
-      }
-      else if (id === "cmd_type_manual") {
-        userState[from] = null;
-        reply = LANG[lang].typeManual;
-      }
-      else if (id.startsWith("stn_")) {
-        const stnCode = id.split("_")[1];
-        if (userState[from]?.step === "route_from") {
-           userState[from] = { step: "route_to", fromStn: stnCode };
-           await sendStationMenu(from, lang, false);
-           return;
-        } 
-        else if (userState[from]?.step === "route_to") {
-           const fromStn = userState[from].fromStn;
-           userState[from] = null; // Clear state
-           reply = await handleBetween(fromStn, stnCode, lang);
-        }
-        else {
-           reply = LANG[lang].sessionErr; 
-        }
       }
     } 
 
-    // --- 2. TEXT HANDLER ---
+    // --- TEXT HANDLER ---
     else if (message.type === "text") {
       const txt = cleanText(message.text.body);
       const rawTxt = message.text.body.trim();
       
-      if (["hi", "hello", "menu", "হ্যালো", "হাই"].includes(txt)) { await sendMainMenu(from, lang); return; }
-      if (["lang", "language", "ভাষা"].includes(txt)) { await sendLanguageMenu(from); return; }
+      if (["hi", "hello", "menu", "হ্যালো", "হাই"].includes(txt)) { await sendWhatsAppMessage(from, LANG[lang].welcome); return; }
+      if (["lang", "language", "ভাষা", "भाषा"].includes(txt)) { await sendLanguageButtons(from); return; }
       
       const pnrMatch = bengaliToEnglishDigits(rawTxt).match(/\b\d{10}\b/);
       const trainMatch = bengaliToEnglishDigits(rawTxt).match(/\b\d{5}\b/);
-      let routeMatch = rawTxt.match(/(.+?)\s+(থেকে|to)\s+(.+)/i);
+      let routeMatch = rawTxt.match(/(.+?)\s+(থেকে|to|-|se)\s+(.+)/i); 
 
-      if (pnrMatch) { userState[from] = null; reply = await handlePNR(pnrMatch[0], lang); }
-      else if (trainMatch) { userState[from] = null; reply = await handleLive(trainMatch[0], lang); }
+      if (pnrMatch) { reply = await handlePNR(pnrMatch[0], lang); }
+      else if (trainMatch) { reply = await handleLive(trainMatch[0], lang); }
       else if (routeMatch) {
-         userState[from] = null;
-         let rawFrom = routeMatch[1].replace(/(যাব|যাওয়ার|যেতে|ট্রেন|কখন|train|going)/gi, "").trim();
-         let rawTo = routeMatch[3].replace(/(যাব|যাওয়ার|যেতে|ট্রেন|কখন|আছে|কি|train|going)/gi, "").trim();
+         let rawFrom = routeMatch[1];
+         let rawTo = routeMatch[3];
          
-         // BUG FIX: Checking dictionary first
-         let f = await resolveStation(rawFrom);
-         let t = await resolveStation(rawTo);
+         // Parallel execution for double speed!
+         const [f, t] = await Promise.all([resolveStation(rawFrom), resolveStation(rawTo)]);
          
          if(f && t) reply = await handleBetween(f, t, lang);
          else reply = LANG[lang].btnErr;
       }
-      else if (userState[from]?.step === "pnr") { reply = LANG[lang].pnrErr; }
-      else if (userState[from]?.step === "live") { reply = LANG[lang].liveErr; }
       else {
         if (ai) {
-          const resp = await ai.models.generateContent({ model: "gemini-3.5-flash-lite", contents: `Act as Sealdah Train Bot. Reply shortly. Note: Search only for local trains. User: ${rawTxt}` });
-          reply = resp?.text || resp?.candidates?.[0]?.content?.parts?.[0]?.text || "Menu: Type 'Hi'";
-        } else reply = "Please type 'Menu' or 'Hi'.";
+          const resp = await ai.models.generateContent({ model: "gemini-3.5-flash-lite", contents: `Act as Sealdah Train Bot. Note: Search only for local trains. Reply shortly. User: ${rawTxt}` });
+          reply = resp?.text || resp?.candidates?.[0]?.content?.parts?.[0]?.text || "Type 'Hi' for options.";
+        } else reply = LANG[lang].welcome;
       }
     }
 
-    // --- 3. LOCATION HANDLER ---
+    // --- LOCATION HANDLER ---
     else if (message.type === "location") {
       const loc = getNearestStation(message.location.latitude, message.location.longitude);
       if (loc.station) {
@@ -509,7 +440,7 @@ app.post("/webhook", async (req, res) => {
 
     if (reply) await sendWhatsAppMessage(from, reply);
 
-  } catch (error) { console.error("Webhook Error"); }
+  } catch (error) { console.error("Webhook Error", error.message); }
 });
 
 app.get("/webhook", (req, res) => {
@@ -518,7 +449,7 @@ app.get("/webhook", (req, res) => {
 });
 
 /* =========================================================
-   FRONTEND - BEAUTIFUL PREMIUM DASHBOARD
+   FRONTEND - BEAUTIFUL PREMIUM DASHBOARD (WITH ACCURATE MAP)
 ========================================================= */
 app.get("/", (req, res) => {
   res.send(`
@@ -771,7 +702,7 @@ app.get("/", (req, res) => {
       
       if(currentStop) {
         L.marker([currentStop.lat, currentStop.lng]).addTo(map)
-         .bindPopup("🚆 <b>" + data.trainNumber + "</b><br>📍 " + currentStop.name).openPopup();
+         .bindPopup("🚆 <b>" + data.trainNumber + "</b><br>📍 Current: " + currentStop.name).openPopup();
       }
 
       resBox.innerHTML = \`<b>Status:</b> \${data.status || "-"} <br><b>Delay:</b> \${data.delayMinutes ?? 0} mins\`;
@@ -813,7 +744,8 @@ app.get("/api/between", async (req, res) => {
     const to = await resolveStation(toInput);
     if (!from || !to) return res.status(400).json({ error: true, message: "Station not found. Use correct name." });
     
-    const result = await railRadarGet(`/v1/trains/between/${from}/${to}`, { date, live: "true" });
+    // API cache busting logic applied here as well
+    const result = await railRadarGet(`/v1/trains/between/${from}/${to}`, { date, live: "true", refresh: "true" });
     const trains = result?.data?.trains || result?.trains || [];
     
     const now = new Date();
@@ -840,7 +772,7 @@ app.get("/api/map", async (req, res) => {
   if (!/^\d{5}$/.test(train)) return res.status(400).json({ error: "Invalid Train Number" });
   try {
     const [live, route] = await Promise.all([
-      railRadarGet(`/v1/trains/${train}/live`, { authoritative: "true" }), 
+      railRadarGet(`/v1/trains/${train}/live`, { authoritative: "true", refresh: "true" }), 
       railRadarGet(`/v1/trains/${train}/route`, { format: "geojson", stops: "true" })
     ]);
     const liveData = live?.data || live; const routeData = route?.data || route;
